@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portál institucí - Generátor listin</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar card">
+      <div class="brand-wrap">
+        <div class="brand-icon">P</div>
+        <div>
+          <h1 class="brand-title">Portál institucí</h1>
+          <p class="brand-subtitle">Lokální verze bez CDN Tailwindu a bez externích fontů</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="uploadZone" class="upload-box">
+          <div class="upload-text upload-text-inline">
+            <input type="file" id="fileInput" accept="application/pdf" hidden>
+            <label for="fileInput" class="upload-link upload-link-inline">
+              <span class="upload-inline-label">Vstupní PDF</span>
+              <span class="btn-icon">📎</span>
+              <span id="fileNameDisplay">Nahrát PDF odesílatele</span>
+            </label>
+          </div>
+          <div id="fileIndicator" class="file-indicator hidden"></div>
+          <button id="clearFile" class="icon-btn hidden" type="button" aria-label="Odebrat soubor">✕</button>
+        </div>
+
+        <button id="toggleContextBtn" class="btn btn-secondary context-top-btn" type="button">Kontext a údaje</button>
+      </div>
+    </header>
+
+    <main class="layout-grid">
+      <section class="left-col">
+        <div class="card panel panel-compact">
+          <div class="panel-head compact-head">
+            <h2 class="eyebrow">Kategorie</h2>
+            <span id="totalCount" class="counter-pill">0 kontaktů</span>
+          </div>
+
+          <nav id="filterButtons" class="filter-row filter-row-compact">
+            <button data-category="all" class="filter-btn active" type="button">Všechny</button>
+            <button data-category="exekutori" class="filter-btn" type="button">Exekutoři</button>
+            <button data-category="banky" class="filter-btn" type="button">Banky</button>
+            <button data-category="ossz" class="filter-btn" type="button">OSSZ</button>
+            <button data-category="pojistovny" class="filter-btn" type="button">Pojišťovny</button>
+            <button data-category="soudy" class="filter-btn" type="button">Soudy</button>
+          </nav>
+
+          <div class="search-wrap search-wrap-compact">
+            <label class="search-box" for="searchInput">
+              <span class="search-icon">⌕</span>
+              <input type="text" id="searchInput" placeholder="Hledat příjemce (název, město, DS)...">
+            </label>
+          </div>
+
+          <div id="results" class="results-list results-list-compact"></div>
+
+          <div id="contactDetail" class="detail-inline hidden">
+            <div class="detail-inline-head">
+              <span id="detailTag" class="category-tag">KATEGORIE</span>
+              <button id="closeDetail" class="icon-btn icon-btn-light" type="button" aria-label="Zavřít detail">✕</button>
+            </div>
+
+            <h3 id="detailTitle" class="detail-title-inline">--</h3>
+            <p id="detailMesto" class="detail-subtitle-inline">--</p>
+
+            <div class="detail-inline-grid">
+              <div class="detail-inline-box">
+                <span class="detail-label">Datová schránka</span>
+                <div id="detailDS" class="detail-value detail-value-mono">--</div>
+              </div>
+
+              <div class="detail-inline-box">
+                <span class="detail-label">Telefon</span>
+                <div id="detailTel" class="detail-value">--</div>
+              </div>
+
+              <div class="detail-inline-box detail-inline-box-wide">
+                <span class="detail-label">Otevírací doba</span>
+                <div id="detailHours" class="detail-value">--</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="right-col card editor-shell">
+        <div class="editor-topbar editor-topbar-minimal">
+          <div class="status-line status-line-top">
+            <span id="statusIndicator" class="status-dot"></span>
+            <span id="statusText" class="status-text">Čekám na zadání</span>
+          </div>
+        </div>
+
+        <div class="editor-inputs">
+          <div id="contextWrapper" class="hidden">
+            <textarea id="inputAiContext" class="field textarea context-box" placeholder="Vaše č.j., jméno vyřizujícího, specifické instrukce pro text..."></textarea>
+          </div>
+
+          <div class="quick-actions">
+            <span class="quick-label">Rychlé volby pro AI:</span>
+            <div class="quick-actions-row">
+              <button class="quick-tag" data-prompt="Žádost vyškrtnutí ze soupisu" type="button">Vyškrtnutí ze soupisu</button>
+              <button class="quick-tag" data-prompt="Žádost o zastavení exekuce" type="button">Žádost o zastavení exekuce</button>
+              <button class="quick-tag" data-prompt="Žádost o splátkový kalendář" type="button">Splátkový kalendář</button>
+              <button class="quick-tag" data-prompt="Žádost o výpočet výše dluhu" type="button">Výše dluhu</button>
+            </div>
+          </div>
+
+          <textarea id="aiPromptInput" class="field textarea prompt-box" rows="3" placeholder="Zadejte účel listiny nebo vyberte z rychlých voleb..."></textarea>
+
+          <div id="installmentFields" class="installment-box hidden">
+            <div class="installment-head">
+              <span class="quick-label">Údaje ke splátkovému kalendáři</span>
+              <button id="extractDebtBtn" class="btn btn-secondary btn-small" type="button">Načíst z PDF</button>
+            </div>
+
+            <div class="installment-grid">
+              <div>
+                <label for="debtAmountInput" class="detail-label">Dlužná částka</label>
+                <input id="debtAmountInput" class="field compact-field" type="text" inputmode="decimal" placeholder="např. 12 500">
+              </div>
+
+              <div>
+                <label for="monthsInput" class="detail-label">Počet měsíců</label>
+                <input id="monthsInput" class="field compact-field" type="number" min="1" step="1" placeholder="např. 10">
+              </div>
+
+              <div>
+                <label for="monthlyPaymentInput" class="detail-label">Měsíční splátka</label>
+                <input id="monthlyPaymentInput" class="field compact-field" type="text" inputmode="decimal" placeholder="např. 1 250">
+              </div>
+            </div>
+
+            <p id="installmentHint" class="installment-hint hidden"></p>
+          </div>
+
+          <button id="aiGenerateBtn" class="btn btn-primary btn-block" type="button">
+            <span id="btnSpinner" class="spinner hidden"></span>
+            <span id="btnIcon">⚡</span>
+            <span id="btnText">GENEROVAT LISTINU Z PDF</span>
+          </button>
+        </div>
+
+        <div class="preview-area">
+          <div id="docPlaceholder" class="placeholder-box">
+            <div class="placeholder-icon">📄</div>
+            <p>Zvolte příjemce, nahrajte PDF a vygenerujte dokument.</p>
+          </div>
+
+          <div id="docContent" class="doc-wrap hidden">
+            <article class="document-paper">
+              <div class="doc-header">
+                <div class="doc-party doc-party-left">
+                  <div class="doc-label doc-label-primary">ODESÍLATEL:</div>
+                  <div id="docSenderName" class="doc-title">--</div>
+                  <div id="docSenderAddress" class="doc-address">--</div>
+                </div>
+
+                <div class="doc-party doc-party-right">
+                  <div class="doc-label">PŘÍJEMCE:</div>
+                  <div id="docTargetTitle" class="doc-title">--</div>
+                  <div id="docTargetAddress" class="doc-address">--</div>
+                </div>
+              </div>
+
+              <div class="doc-meta">
+                <div>
+                  <span class="doc-label">NAŠE Č.J.:</span>
+                  <span id="docRefData" class="doc-meta-value">--</span>
+                </div>
+                <div class="doc-meta-right">
+                  <span class="doc-label">DATUM A MÍSTO:</span>
+                  <span id="docDate" class="doc-meta-value">--</span>
+                </div>
+              </div>
+
+              <div class="doc-body-wrap">
+                <div id="docMainTitle" class="doc-main-title">--</div>
+                <div id="docBodyText" class="doc-body" contenteditable="true">--</div>
+
+                <div class="signature-wrap">
+                  <div class="signature-line"></div>
+                  <p class="signature-text">Vlastnoruční podpis</p>
+                </div>
+              </div>
+            </article>
+
+            <div class="preview-actions no-print">
+              <button id="printBtn" class="btn btn-secondary" type="button">Tisk</button>
+              <button id="downloadPdfBtn" class="btn btn-primary" type="button">Stáhnout PDF</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast">Operace úspěšná</div>
+  <script src="/app.js"></script>
+</body>
+</html>
