@@ -1,3 +1,4 @@
+import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -385,6 +386,97 @@ app.post("/api/generate", upload.single("pdf"), async (req, res) => {
     res.json({ ok: true, document: result });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message || "Generování selhalo." });
+  }
+});
+
+app.post("/api/export-docx", async (req, res) => {
+  try {
+    const {
+      senderName,
+      senderAddress,
+      recipientName,
+      recipientAddress,
+      refData,
+      dateText,
+      title,
+      body
+    } = req.body || {};
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: "ODESÍLATEL:", bold: true }),
+                new TextRun({ text: ` ${senderName || "---"}` })
+              ]
+            }),
+            new Paragraph(senderAddress || "---"),
+            new Paragraph(""),
+            new Paragraph({
+              children: [
+                new TextRun({ text: "PŘÍJEMCE:", bold: true }),
+                new TextRun({ text: ` ${recipientName || "---"}` })
+              ]
+            }),
+            new Paragraph(recipientAddress || "---"),
+            new Paragraph(""),
+            new Paragraph({
+              children: [
+                new TextRun({ text: "NAŠE Č.J.: ", bold: true }),
+                new TextRun(refData || "---")
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: "DATUM A MÍSTO: ", bold: true }),
+                new TextRun(dateText || "---")
+              ]
+            }),
+            new Paragraph(""),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: title || "ÚŘEDNÍ LISTINA",
+                  bold: true,
+                  allCaps: true,
+                  size: 28
+                })
+              ]
+            }),
+            new Paragraph(""),
+            ...(String(body || "")
+              .split("\n")
+              .map((line) => new Paragraph(line))),
+            new Paragraph(""),
+            new Paragraph(""),
+            new Paragraph("______________________________"),
+            new Paragraph("Vlastnoruční podpis")
+          ]
+        }
+      ]
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename=\"listina.docx\"'
+    );
+
+    res.send(buffer);
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message || "Export do DOCX selhal."
+    });
   }
 });
 

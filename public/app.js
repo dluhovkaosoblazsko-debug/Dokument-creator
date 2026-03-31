@@ -523,6 +523,44 @@ async function generateDocumentViaServer() {
   return result.document;
 }
 
+async function downloadDocx() {
+  const payload = {
+    senderName: byId("docSenderName")?.innerText || "",
+    senderAddress: byId("docSenderAddress")?.innerText || "",
+    recipientName: byId("docTargetTitle")?.innerText || "",
+    recipientAddress: byId("docTargetAddress")?.innerText || "",
+    refData: byId("docRefData")?.innerText || "",
+    dateText: byId("docDate")?.innerText || "",
+    title: byId("docMainTitle")?.innerText || "",
+    body: byId("docBodyText")?.innerText || ""
+  };
+
+  const response = await fetch("/api/export-docx", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.error || "Stažení DOCX selhalo.");
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "listina.docx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  window.URL.revokeObjectURL(url);
+}
+
 function bindEvents() {
   byId('fileInput')?.addEventListener('change', (e) => {
     const file = e.target.files?.[0] || null;
@@ -534,6 +572,15 @@ function bindEvents() {
     }
     setFileUi(file);
   });
+  
+byId("downloadDocxBtn")?.addEventListener("click", async () => {
+  try {
+    await downloadDocx();
+    showToast("Soubor DOCX byl stažen.");
+  } catch (error) {
+    showError(error.message);
+  }
+});
 
   byId('clearFile')?.addEventListener('click', () => {
     const fileInput = byId('fileInput');
