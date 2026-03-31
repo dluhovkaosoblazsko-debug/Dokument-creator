@@ -13,7 +13,7 @@
         <div class="brand-icon">P</div>
         <div>
           <h1 class="brand-title">Portál institucí</h1>
-          <p class="brand-subtitle">Lokální verze bez CDN Tailwindu a bez externích fontů</p>
+          <p class="brand-subtitle">E. L. A. I. </p>
         </div>
       </div>
 
@@ -92,7 +92,6 @@
         <div class="editor-topbar editor-topbar-minimal">
           <div class="status-line status-line-top">
             <span id="statusIndicator" class="status-dot"></span>
-            <span id="statusText" class="status-text">Čekám na zadání</span>
           </div>
         </div>
 
@@ -103,10 +102,10 @@
 
           <div class="quick-actions">
             <div class="quick-actions-row">
-              <button class="quick-tag" data-prompt="Žádost vyškrtnutí ze soupisu" type="button">Vyškrtnutí ze soupisu</button>
-              <button class="quick-tag" data-prompt="Žádost o zastavení exekuce" type="button">Žádost o zastavení exekuce</button>
-              <button class="quick-tag" data-prompt="Žádost o splátkový kalendář" type="button">Splátkový kalendář</button>
-              <button class="quick-tag" data-prompt="Žádost o výpočet výše dluhu" type="button">Výše dluhu</button>
+              <button class="quick-tag" data-prompt="Žádost o vyčíslení dluhu" type="button">Vyčíslení dluhu</button>
+              <button class="quick-tag" data-prompt="Žádost o splátkový kalendář" type="git statusbutton">Splátkový kalendář</button>
+              <button class="quick-tag" data-prompt="Žádost o vyškrtnutí ze soupisu" type="button">Vyškrtnutí ze soupisu</button>
+              <button class="quick-tag" data-prompt="Návrh na zastavení exekuce" type="button">Zastavení exekuce</button>
             </div>
           </div>
 
@@ -136,6 +135,237 @@
             </div>
 
             <p id="installmentHint" class="installment-hint hidden"></p>
+          </div>
+
+          <div id="stopExecutionFields" class="stop-form hidden">
+            <div class="stop-form-head">
+              <span class="quick-label">Údaje pro návrh na zastavení exekuce</span>
+              <button id="extractStopExecutionBtn" class="btn btn-secondary btn-small" type="button">Načíst z PDF</button>
+            </div>
+
+            <div class="stop-form-section">
+              <div class="stop-form-title">Exekuce</div>
+              <div class="stop-grid stop-grid-2">
+                <div>
+                  <label for="seExecutorName" class="detail-label">Soudní exekutor</label>
+                  <input id="seExecutorName" class="field compact-field" type="text" placeholder="např. JUDr. Jan Novák">
+                </div>
+                <div>
+                  <label for="seOfficeName" class="detail-label">Exekutorský úřad</label>
+                  <input id="seOfficeName" class="field compact-field" type="text" placeholder="např. Exekutorský úřad v Pardubicích">
+                </div>
+                <div class="stop-col-span-2">
+                  <label for="seOfficeAddress" class="detail-label">Adresa exekutorského úřadu</label>
+                  <input id="seOfficeAddress" class="field compact-field" type="text" placeholder="ulice, město, PSČ">
+                </div>
+                <div>
+                  <label for="seCaseNo" class="detail-label">Spisová značka</label>
+                  <input id="seCaseNo" class="field compact-field" type="text" placeholder="např. 180 EX 1566/2018">
+                </div>
+                <div>
+                  <label for="sePlace" class="detail-label">Místo sepsání</label>
+                  <input id="sePlace" class="field compact-field" type="text" placeholder="např. Jeseník">
+                </div>
+                <div>
+                  <label for="seDate" class="detail-label">Datum</label>
+                  <input id="seDate" class="field compact-field" type="date">
+                </div>
+              </div>
+            </div>
+
+            <div class="stop-form-section" id="seRoleSection">
+              <div class="stop-form-title">Kdo podání činí</div>
+              <div class="radio-row">
+                <label><input type="radio" name="seNavrhovatelRole" value="opravneny"> Oprávněný</label>
+                <label><input type="radio" name="seNavrhovatelRole" value="povinny" checked> Povinný</label>
+                <label><input type="radio" name="seNavrhovatelRole" value="manzel_povinneho"> Manžel povinného</label>
+              </div>
+            </div>
+
+            <div class="stop-form-section" id="seOpravnenySection">
+              <div class="stop-form-title">Oprávněný</div>
+              <div class="checkbox-row">
+                <label><input type="checkbox" id="seOpravnenyPO"> Oprávněný je právnická osoba</label>
+              </div>
+              <div class="stop-grid stop-grid-2">
+                <div>
+                  <label for="seOpravnenyName" class="detail-label">Jméno / název</label>
+                  <input id="seOpravnenyName" class="field compact-field" type="text">
+                </div>
+                <div>
+                  <label for="seOpravnenyId" class="detail-label">r. č. / datum narození / IČO</label>
+                  <input id="seOpravnenyId" class="field compact-field" type="text">
+                </div>
+                <div class="stop-col-span-2">
+                  <label for="seOpravnenyAddress" class="detail-label">Bydliště / sídlo</label>
+                  <input id="seOpravnenyAddress" class="field compact-field" type="text">
+                </div>
+                <div class="stop-col-span-2">
+                  <label for="seOpravnenyDelivery" class="detail-label">Adresa pro doručování</label>
+                  <input id="seOpravnenyDelivery" class="field compact-field" type="text">
+                </div>
+              </div>
+
+              <div id="seOpravnenyRepWrap" class="stop-subsection hidden">
+                <div class="stop-grid stop-grid-2">
+                  <div>
+                    <label for="seOpravnenyRep" class="detail-label">Za oprávněného jedná</label>
+                    <input id="seOpravnenyRep" class="field compact-field" type="text">
+                  </div>
+                  <div>
+                    <label for="seOpravnenyRepBasis" class="detail-label">Na základě čeho jedná</label>
+                    <input id="seOpravnenyRepBasis" class="field compact-field" type="text">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stop-form-section" id="sePovinnySection">
+              <div class="stop-form-title">Povinný</div>
+              <div class="checkbox-row">
+                <label><input type="checkbox" id="sePovinnyPO"> Povinný je právnická osoba</label>
+              </div>
+              <div class="stop-grid stop-grid-2">
+                <div>
+                  <label for="sePovinnyName" class="detail-label">Jméno / název</label>
+                  <input id="sePovinnyName" class="field compact-field" type="text">
+                </div>
+                <div>
+                  <label for="sePovinnyId" class="detail-label">r. č. / datum narození / IČO</label>
+                  <input id="sePovinnyId" class="field compact-field" type="text">
+                </div>
+                <div class="stop-col-span-2">
+                  <label for="sePovinnyAddress" class="detail-label">Bydliště / sídlo</label>
+                  <input id="sePovinnyAddress" class="field compact-field" type="text">
+                </div>
+                <div class="stop-col-span-2">
+                  <label for="sePovinnyDelivery" class="detail-label">Adresa pro doručování</label>
+                  <input id="sePovinnyDelivery" class="field compact-field" type="text">
+                </div>
+              </div>
+
+              <div id="sePovinnyRepWrap" class="stop-subsection hidden">
+                <div class="stop-grid stop-grid-2">
+                  <div>
+                    <label for="sePovinnyRep" class="detail-label">Za povinného jedná</label>
+                    <input id="sePovinnyRep" class="field compact-field" type="text">
+                  </div>
+                  <div>
+                    <label for="sePovinnyRepBasis" class="detail-label">Na základě čeho jedná</label>
+                    <input id="sePovinnyRepBasis" class="field compact-field" type="text">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stop-form-section" id="seSpouseSection">
+              <div class="checkbox-row">
+                <label><input type="checkbox" id="seSpouseActive"> Manžel/ka povinného je účastníkem řízení</label>
+              </div>
+
+              <div id="seSpouseWrap" class="stop-subsection hidden">
+                <div class="stop-form-title">Manžel povinného</div>
+                <div class="stop-grid stop-grid-2">
+                  <div>
+                    <label for="seSpouseName" class="detail-label">Jméno</label>
+                    <input id="seSpouseName" class="field compact-field" type="text">
+                  </div>
+                  <div>
+                    <label for="seSpouseId" class="detail-label">r. č. / datum narození</label>
+                    <input id="seSpouseId" class="field compact-field" type="text">
+                  </div>
+                  <div class="stop-col-span-2">
+                    <label for="seSpouseAddress" class="detail-label">Adresa</label>
+                    <input id="seSpouseAddress" class="field compact-field" type="text">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stop-form-section" id="seFilingSection">
+              <div class="stop-form-title">Forma podání</div>
+              <div class="radio-row">
+                <label><input type="radio" name="seFilingType" value="listinne" checked> Listinně</label>
+                <label><input type="radio" name="seFilingType" value="elektronicky"> Elektronicky</label>
+              </div>
+
+              <div id="seCopiesWrap" class="stop-subsection">
+                <label for="seCopies" class="detail-label">Počet vyhotovení</label>
+                <input id="seCopies" class="field compact-field" type="text" placeholder="např. DVOJMO">
+              </div>
+
+              <div class="radio-row radio-row-wrap">
+                <label><input type="radio" name="seAttachmentsType" value="dle_textu" checked> Přílohy dle textu</label>
+                <label><input type="radio" name="seAttachmentsType" value="bez_priloh"> Bez příloh</label>
+              </div>
+            </div>
+
+            <div class="stop-form-section" id="seContentSection">
+              <div class="stop-form-title">Obsah návrhu</div>
+              <div class="stop-grid stop-grid-1">
+                <div>
+                  <label for="seTitleBasis" class="detail-label">Exekuční titul / listina, na jejímž základě je vedena exekuce</label>
+                  <textarea id="seTitleBasis" class="field textarea compact-textarea" placeholder="např. rozsudek Okresního soudu ..., č. j. ..."></textarea>
+                </div>
+                <div>
+                  <label for="seReasons" class="detail-label">Důvod zastavení exekuce</label>
+                  <textarea id="seReasons" class="field textarea compact-textarea" placeholder="Popište důvod zastavení exekuce"></textarea>
+                </div>
+                <div>
+                  <label for="seEvidence" class="detail-label">Důkazy</label>
+                  <textarea id="seEvidence" class="field textarea compact-textarea" placeholder="Listiny, potvrzení, jiné důkazy"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="stop-form-section" id="seCostsSection">
+              <div class="checkbox-row">
+                <label><input type="checkbox" id="seCostsActive"> Uplatňuji nárok na náhradu nákladů</label>
+              </div>
+
+              <div id="seCostsWrap" class="stop-subsection hidden">
+                <div class="stop-grid stop-grid-2">
+                  <div>
+                    <label for="seCostsAmount" class="detail-label">Výše nákladů</label>
+                    <input id="seCostsAmount" class="field compact-field" type="text" placeholder="např. 1 200 Kč">
+                  </div>
+                  <div></div>
+                  <div class="stop-col-span-2">
+                    <label for="seCostsBreakdown" class="detail-label">Rozpis nákladů</label>
+                    <textarea id="seCostsBreakdown" class="field textarea compact-textarea" placeholder="Poštovné, kopie, právní pomoc..."></textarea>
+                  </div>
+                  <div class="stop-col-span-2">
+                    <label for="seCostsEvidence" class="detail-label">Důkazy k nákladům</label>
+                    <textarea id="seCostsEvidence" class="field textarea compact-textarea" placeholder="Doklady, potvrzení"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stop-form-section" id="seTimeSection">
+              <div class="stop-form-title">Časové údaje</div>
+              <div class="stop-grid stop-grid-2">
+                <div>
+                  <label for="seReasonKnownDate" class="detail-label">Kdy se navrhovatel dozvěděl o důvodu zastavení</label>
+                  <input id="seReasonKnownDate" class="field compact-field" type="date">
+                </div>
+                <div>
+                  <label for="seNoticeDate" class="detail-label">Datum doručení výzvy ke splnění</label>
+                  <input id="seNoticeDate" class="field compact-field" type="date">
+                </div>
+                <div class="stop-col-span-2 checkbox-row">
+                  <label><input type="checkbox" id="seNoticeNotDelivered"> Výzva ke splnění nebyla doručena</label>
+                </div>
+                <div class="stop-col-span-2">
+                  <label for="seReasonKnownHow" class="detail-label">Jak se navrhovatel o důvodu dozvěděl</label>
+                  <textarea id="seReasonKnownHow" class="field textarea compact-textarea" placeholder="např. z vyrozumění, z listiny, od oprávněného"></textarea>
+                </div>
+                <div class="stop-col-span-2">
+                  <label for="seTimeEvidence" class="detail-label">Důkazy k časovým údajům</label>
+                  <textarea id="seTimeEvidence" class="field textarea compact-textarea" placeholder="např. doručenka, e-mail, potvrzení"></textarea>
+                </div>
+              </div>
+            </div>
           </div>
 
           <button id="aiGenerateBtn" class="btn btn-primary btn-block" type="button">

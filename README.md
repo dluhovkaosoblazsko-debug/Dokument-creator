@@ -1,24 +1,18 @@
-# Portál institucí – upravená lokální verze
+# Portál institucí – opravdu finální verze
 
-## Co je upravené
+## Co je v této verzi
 
-- lokální CSS bez Tailwind CDN
-- kontakty se automaticky načítají ze serveru po refreshi
-- trvalé JSON soubory:
-  - `data/default-core.json`
-  - `data/default-exekutori.json`
-- horní lišta bez importu JSON
-- tlačítko **Kontext a údaje** vedle PDF
-- kompaktní levý panel
-- detail kontaktu pod seznamem
-- zobrazení datové schránky, telefonu a otevírací doby
-- pole pro splátkový kalendář
-- dopočet počtu měsíců / měsíční splátky
-- možnost načíst dlužnou částku z PDF přes AI
+- plné UI portálu
+- načítání kontaktů z `data/default-core.json` a `data/default-exekutori.json`
+- kompaktní levý i pravý panel
+- detail kontaktu s telefonem, datovou schránkou a otevírací dobou
+- splátkový kalendář s dopočtem splátek
+- formulář **Návrh na zastavení exekuce**
+- automatické předvyplnění formuláře zastavení exekuce z PDF
+- schování nerelevantních polí podle role navrhovatele
+- generování listiny přes Gemini API
 
-## Důležité
-
-Do složky `data/` vlož své dva soubory:
+## Co vložit do složky `data`
 
 - `default-core.json`
 - `default-exekutori.json`

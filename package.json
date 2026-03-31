@@ -1,6 +1,6 @@
 {
-  "name": "portal-instituci-upraveno",
-  "version": "2.1.0",
+  "name": "portal-instituci-opravdu-final",
+  "version": "2.3.0",
   "type": "module",
   "scripts": {
     "dev": "node --watch server.js",
