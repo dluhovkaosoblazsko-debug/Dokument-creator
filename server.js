@@ -369,6 +369,26 @@ app.post("/api/import-json", upload.single("jsonDb"), (req, res) => {
 });
 
 
+app.post("/api/extract-debt", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ ok: false, error: "Chybí PDF soubor." });
+    const debtAmount = await extractDebtAmountFromPdf(req.file.buffer.toString("base64"));
+    res.json({ ok: true, debtAmount });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message || "Nepodařilo se načíst dlužnou částku z PDF." });
+  }
+});
+
+app.post("/api/extract-stop-execution", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ ok: false, error: "Chybí PDF soubor." });
+    const data = await extractStopExecutionFromPdf(req.file.buffer.toString("base64"));
+    res.json({ ok: true, data });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message || "Extrakce údajů z PDF selhala." });
+  }
+});
+
 app.post("/api/generate", upload.single("pdf"), async (req, res) => {
   try {
     const prompt = normalizeText(req.body.prompt);
