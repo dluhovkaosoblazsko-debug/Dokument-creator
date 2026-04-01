@@ -17,7 +17,7 @@ function updateTotalCount() { const el = byId('totalCount'); if (el) el.innerTex
 function updateStatus() {
   const promptInput = byId('aiPromptInput');
   const hasFile = !!getSelectedFile();
-  const hasContact = state.selectedContact !== null;
+  const hasContact = state.selectedContact !== null || state.documentRecipient !== null;
   const hasPrompt = !!promptInput && promptInput.value.trim().length > 2;
 
   const indicator = byId('statusIndicator');
@@ -67,12 +67,10 @@ function setDocumentRecipientFromSelected() {
   }
   state.documentRecipient = state.selectedContact;
   updateRecipientUi();
+  renderResults();
   showToast('Kontakt byl nastaven jako adresát listiny.');
   updateStatus();
 }
-
-
-
 function setLoading(isLoading) {
   const btn = byId('aiGenerateBtn');
   const btnText = byId('btnText');
@@ -137,10 +135,11 @@ function renderResults() {
   const items = getVisibleItems(); res.innerHTML = '';
   if (!items.length) { res.innerHTML = '<div class="empty-state">Nenalezeny žádné záznamy v této kategorii.</div>'; return; }
   items.forEach((item) => {
+    const isRecipient = state.documentRecipient?.id === item.id;
     const div = document.createElement('button');
     div.type = 'button';
     div.className = `contact-row ${state.selectedContact?.id === item.id ? 'selected' : ''}`;
-    div.innerHTML = `<div class="contact-text"><span class="contact-title">${escapeHtml(item.nazev)}</span><span class="contact-subtitle">${escapeHtml(item.mesto)}</span></div><span class="category-tag cat-${escapeHtml(item.category)}">${escapeHtml(item.category.substring(0,4))}</span>`;
+    div.innerHTML = `<div class="contact-text"><span class="contact-title">${escapeHtml(item.nazev)}</span><span class="contact-subtitle">${escapeHtml(item.mesto)}</span></div><span style="display:flex;gap:6px;align-items:center;"><span class="category-tag cat-${escapeHtml(item.category)}">${escapeHtml(item.category.substring(0,4))}</span>${isRecipient ? '<span class="category-tag" style="background:#22c55e;color:#052e16;">ADR</span>' : ''}</span>`;
     div.addEventListener('click', () => { state.selectedContact = item; openContactDetail(item, item.category); renderResults(); updateStatus(); });
     res.appendChild(div);
   });
@@ -163,8 +162,9 @@ function renderDocument(result) {
   byId('docContent')?.classList.remove('hidden');
   byId('docSenderName').innerText = result.senderName || 'Neuvedeno';
   byId('docSenderAddress').innerText = result.senderAddress || 'Neuvedeno';
-  byId('docTargetTitle').innerText = state.selectedContact?.nazev || '--';
-  byId('docTargetAddress').innerText = state.selectedContact?.adresa || state.selectedContact?.mesto || '--';
+  const recipient = state.documentRecipient || state.selectedContact;
+  byId('docTargetTitle').innerText = recipient?.nazev || '--';
+  byId('docTargetAddress').innerText = recipient?.adresa || recipient?.mesto || '--';
   byId('docRefData').innerText = result.refData || '---';
   byId('docMainTitle').innerText = result.title || 'ÚŘEDNÍ LISTINA';
   byId('docBodyText').innerText = result.body || '';
@@ -201,6 +201,7 @@ function setPrompt(value) {
   togglePostponementFields();
   toggleCooperationFields();
   toggleExclusionFields();
+  ensureExclusionItemRows();
   toggleMergeFields();
   toggleLawsuitFields();
   toggleCommonFormActions();
@@ -289,9 +290,138 @@ function buildStopExecutionContext(){
 
 
 
+
+function createExclusionItemRow(item = {}, index = 0) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'installment-box exclusion-item-row';
+  wrapper.setAttribute('data-ex-item', '1');
+  wrapper.innerHTML = `<div class="installment-head" style="margin-bottom:8px;"><span class="quick-label">Položka ${index + 1}</span><button class="btn btn-secondary btn-small ex-remove-item-btn${index === 0 ? ' hidden' : ''}" type="button">Odebrat</button></div><div class="stop-grid stop-grid-2"><div class="stop-col-span-2"><label class="detail-label">Popis věci</label><textarea class="field textarea compact-textarea ex-item-description">${item.description || ''}</textarea></div><div><label class="detail-label">Číslo položky v soupisu</label><input class="field compact-field ex-item-number" type="text" value="${item.number || ''}"></div></div>`;
+  return wrapper;
+}
+function refreshExclusionItemRows() {
+  const container = byId('exItemsContainer');
+  if (!container) return;
+  const rows = [...container.querySelectorAll('[data-ex-item]')];
+  rows.forEach((row, idx) => {
+    const label = row.querySelector('.quick-label');
+    if (label) label.innerText = `Položka ${idx + 1}`;
+    const removeBtn = row.querySelector('.ex-remove-item-btn');
+    if (removeBtn) removeBtn.classList.toggle('hidden', rows.length === 1 || idx === 0);
+  });
+}
+function ensureExclusionItemRows() {
+  const container = byId('exItemsContainer');
+  if (!container) return;
+  if (!container.querySelector('[data-ex-item]')) container.appendChild(createExclusionItemRow({}, 0));
+  refreshExclusionItemRows();
+}
+function addExclusionItemRow(item = {}) {
+  const container = byId('exItemsContainer');
+  if (!container) return;
+  const rows = [...container.querySelectorAll('[data-ex-item]')];
+  container.appendChild(createExclusionItemRow(item, rows.length));
+  refreshExclusionItemRows();
+}
+function collectExclusionItems() {
+  const container = byId('exItemsContainer');
+  if (!container) return [];
+  return [...container.querySelectorAll('[data-ex-item]')]
+    .map((row) => ({
+      description: row.querySelector('.ex-item-description')?.value?.trim() || '',
+      number: row.querySelector('.ex-item-number')?.value?.trim() || ''
+    }))
+    .filter((item) => item.description || item.number);
+}
+function createExclusionItemRow(item = {}, index = 0) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'installment-box exclusion-item-row';
+  wrapper.setAttribute('data-ex-item', '1');
+  wrapper.innerHTML = `<div class="installment-head" style="margin-bottom:8px;"><span class="quick-label">Položka ${index + 1}</span><button class="btn btn-secondary btn-small ex-remove-item-btn${index === 0 ? ' hidden' : ''}" type="button">Odebrat</button></div><div class="stop-grid stop-grid-2"><div class="stop-col-span-2"><label class="detail-label">Popis věci</label><textarea class="field textarea compact-textarea ex-item-description">${item.description || ''}</textarea></div><div><label class="detail-label">Číslo položky v soupisu</label><input class="field compact-field ex-item-number" type="text" value="${item.number || ''}"></div></div>`;
+  return wrapper;
+}
+function refreshExclusionItemRows() {
+  const container = byId('exItemsContainer');
+  if (!container) return;
+  const rows = [...container.querySelectorAll('[data-ex-item]')];
+  rows.forEach((row, idx) => {
+    const label = row.querySelector('.quick-label');
+    if (label) label.innerText = `Položka ${idx + 1}`;
+    const removeBtn = row.querySelector('.ex-remove-item-btn');
+    if (removeBtn) removeBtn.classList.toggle('hidden', rows.length === 1 || idx === 0);
+  });
+}
+function ensureExclusionItemRows() {
+  const container = byId('exItemsContainer');
+  if (!container) return;
+  if (!container.querySelector('[data-ex-item]')) container.appendChild(createExclusionItemRow({}, 0));
+  refreshExclusionItemRows();
+}
+function addExclusionItemRow(item = {}) {
+  const container = byId('exItemsContainer');
+  if (!container) return;
+  const rows = [...container.querySelectorAll('[data-ex-item]')];
+  container.appendChild(createExclusionItemRow(item, rows.length));
+  refreshExclusionItemRows();
+}
+function collectExclusionItems() {
+  const container = byId('exItemsContainer');
+  if (!container) return [];
+  return [...container.querySelectorAll('[data-ex-item]')]
+    .map((row) => ({
+      description: row.querySelector('.ex-item-description')?.value?.trim() || '',
+      number: row.querySelector('.ex-item-number')?.value?.trim() || ''
+    }))
+    .filter((item) => item.description || item.number);
+}
+
 function prefillExclusionDefaults(){ const dateInput = byId('exDate'); if(dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0,10); }
-function toggleExclusionFields(){ const wrapper = byId('exclusionFields'); const prompt = byId('aiPromptInput')?.value || ''; if(!wrapper) return; const show = isExclusionPrompt(prompt); wrapper.classList.toggle('hidden', !show); if(show) prefillExclusionDefaults(); }
-function buildExclusionContext(){ const val=(id)=>byId(id)?.value?.trim()||''; const checked=(id)=>!!byId(id)?.checked; const attachmentsType=getRadioValue('exAttachmentsType'); const proofs=[checked('exProofInvoice')?'faktura / daňový doklad':'',checked('exProofGift')?'darovací smlouva':'',checked('exProofInheritance')?'dědické rozhodnutí':'',checked('exProofPhotos')?'fotografie':'',checked('exProofWitness')?'svědecké výpovědi':'',checked('exProofOtherCheck')?'jiný důkaz':''].filter(Boolean); const lines=['FORMULÁŘ: NÁVRH NA VYŠKRTNUTÍ VĚCI ZE SOUPISU EXEKUCE',val('exOfficeName')?`Exekutorský úřad: ${val('exOfficeName')}`:'',val('exOfficeAddress')?`Sídlo exekutorského úřadu: ${val('exOfficeAddress')}`:'',val('exCaseNo')?`Spisová značka: ${val('exCaseNo')}`:'',val('exOrderNo')?`Č. j. exekučního příkazu: ${val('exOrderNo')}`:'','',val('exApplicantName')?`Navrhovatel: ${val('exApplicantName')}`:'',val('exApplicantBirth')?`Datum narození navrhovatele: ${val('exApplicantBirth')}`:'',val('exApplicantAddress')?`Bydliště navrhovatele: ${val('exApplicantAddress')}`:'','',val('exCreditorName')?`Oprávněný: ${val('exCreditorName')}`:'',val('exDebtorName')?`Povinný: ${val('exDebtorName')}`:'',val('exDebtorAddress')?`Bydliště / sídlo povinného: ${val('exDebtorAddress')}`:'',val('exDebtorBirth')?`Datum narození povinného: ${val('exDebtorBirth')}`:'',val('exExecutionType')?`Typ exekuce: ${val('exExecutionType')==='nemovite'?'prodej nemovitých věcí':'prodej movitých věcí'}`:'','',val('exItemDescription')?`Věc / věci k vyškrtnutí: ${val('exItemDescription')}`:'',val('exInventoryDate')?`Datum soupisu: ${val('exInventoryDate')}`:'',val('exInventoryItemNo')?`Číslo položky v soupisu: ${val('exInventoryItemNo')}`:'',val('exInventoryRecordNo')?`Č. j. soupisu / označení soupisu: ${val('exInventoryRecordNo')}`:'','',val('exOwnershipReason')?`Odůvodnění vlastnictví: ${val('exOwnershipReason')}`:'',proofs.length?`Důkazy vlastnictví: ${proofs.join(', ')}`:'',val('exProofOtherText')?`Upřesnění důkazů: ${val('exProofOtherText')}`:'','',val('exLearnedDate')?`Navrhovatel se o soupisu dozvěděl dne: ${val('exLearnedDate')}`:'',val('exPlace')?`Místo sepsání: ${val('exPlace')}`:'',val('exDate')?`Datum návrhu: ${val('exDate')}`:'',attachmentsType?`Přílohy: ${attachmentsType}`:'','', 'NÁVRH:','Žádám, aby výše uvedená věc / věci byly vyškrtnuty ze soupisu exekuce, protože jsou v mém výlučném vlastnictví a nepodléhají výkonu exekuce.']; return lines.filter(Boolean).join('\n'); }
+function toggleExclusionFields(){ const wrapper = byId('exclusionFields'); const prompt = byId('aiPromptInput')?.value || ''; if(!wrapper) return; const show = isExclusionPrompt(prompt); wrapper.classList.toggle('hidden', !show); if(show){ prefillExclusionDefaults(); ensureExclusionItemRows(); } }
+function buildExclusionContext(){
+  const val=(id)=>byId(id)?.value?.trim()||'';
+  const checked=(id)=>!!byId(id)?.checked;
+  const attachmentsType=getRadioValue('exAttachmentsType');
+  const proofs=[checked('exProofInvoice')?'faktura / daňový doklad':'',checked('exProofGift')?'darovací smlouva':'',checked('exProofInheritance')?'dědické rozhodnutí':'',checked('exProofPhotos')?'fotografie':'',checked('exProofWitness')?'svědecké výpovědi':'',checked('exProofOtherCheck')?'jiný důkaz':''].filter(Boolean);
+  const items = collectExclusionItems();
+  const itemLines = [];
+  items.forEach((item, idx) => {
+    if (item.description) itemLines.push(`Položka ${idx + 1} - popis věci: ${item.description}`);
+    if (item.number) itemLines.push(`Položka ${idx + 1} - číslo položky v soupisu: ${item.number}`);
+  });
+  const lines=[
+    'FORMULÁŘ: NÁVRH NA VYŠKRTNUTÍ VĚCI ZE SOUPISU EXEKUCE',
+    val('exOfficeName')?`Exekutorský úřad: ${val('exOfficeName')}`:'',
+    val('exOfficeAddress')?`Sídlo exekutorského úřadu: ${val('exOfficeAddress')}`:'',
+    val('exCaseNo')?`Spisová značka: ${val('exCaseNo')}`:'',
+    val('exOrderNo')?`Č. j. exekučního příkazu: ${val('exOrderNo')}`:'',
+    '',
+    val('exApplicantName')?`Navrhovatel: ${val('exApplicantName')}`:'',
+    val('exApplicantBirth')?`Datum narození navrhovatele: ${val('exApplicantBirth')}`:'',
+    val('exApplicantAddress')?`Bydliště navrhovatele: ${val('exApplicantAddress')}`:'',
+    '',
+    val('exCreditorName')?`Oprávněný: ${val('exCreditorName')}`:'',
+    val('exDebtorName')?`Povinný: ${val('exDebtorName')}`:'',
+    val('exDebtorAddress')?`Bydliště / sídlo povinného: ${val('exDebtorAddress')}`:'',
+    val('exDebtorBirth')?`Datum narození povinného: ${val('exDebtorBirth')}`:'',
+    val('exExecutionType')?`Typ exekuce: ${val('exExecutionType')==='nemovite'?'prodej nemovitých věcí':'prodej movitých věcí'}`:'',
+    '',
+    ...itemLines,
+    val('exInventoryDate')?`Datum soupisu: ${val('exInventoryDate')}`:'',
+    val('exInventoryRecordNo')?`Č. j. soupisu / označení soupisu: ${val('exInventoryRecordNo')}`:'',
+    '',
+    val('exOwnershipReason')?`Odůvodnění vlastnictví: ${val('exOwnershipReason')}`:'',
+    proofs.length?`Důkazy vlastnictví: ${proofs.join(', ')}`:'',
+    val('exProofOtherText')?`Upřesnění důkazů: ${val('exProofOtherText')}`:'',
+    '',
+    val('exLearnedDate')?`Navrhovatel se o soupisu dozvěděl dne: ${val('exLearnedDate')}`:'',
+    val('exPlace')?`Místo sepsání: ${val('exPlace')}`:'',
+    val('exDate')?`Datum návrhu: ${val('exDate')}`:'',
+    attachmentsType?`Přílohy: ${attachmentsType}`:'',
+    '',
+    'NÁVRH:',
+    'Žádám, aby výše uvedená věc / věci byly vyškrtnuty ze soupisu exekuce, protože jsou v mém výlučném vlastnictví a nepodléhají výkonu exekuce.'
+  ];
+  return lines.filter(Boolean).join('\n');
+}
 function prefillMergeDefaults(){ const dateInput = byId('meDate'); if(dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0,10); }
 function toggleMergeFields(){ const wrapper = byId('mergeFields'); const prompt = byId('aiPromptInput')?.value || ''; if(!wrapper) return; const show = isMergeExecutionsPrompt(prompt); wrapper.classList.toggle('hidden', !show); if(show) prefillMergeDefaults(); }
 function buildMergeContext(){ const val=(id)=>byId(id)?.value?.trim()||''; const lines=['FORMULÁŘ: NÁVRH NA SLOUČENÍ EXEKUCÍ',val('meCourtName')?`Soud: ${val('meCourtName')}`:'',val('meCourtAddress')?`Adresa soudu: ${val('meCourtAddress')}`:'',val('meApplicantName')?`Navrhovatel: ${val('meApplicantName')}`:'',val('meApplicantBirth')?`Datum narození navrhovatele: ${val('meApplicantBirth')}`:'',val('meApplicantAddress')?`Bydliště navrhovatele: ${val('meApplicantAddress')}`:'',val('mePlace')?`Místo sepsání: ${val('mePlace')}`:'',val('meDate')?`Datum návrhu: ${val('meDate')}`:'','',val('meCreditorName')?`Společný oprávněný: ${val('meCreditorName')}`:'',val('meStartYear')?`Rok zahájení řízení: ${val('meStartYear')}`:'',val('mePrincipalLimit')?`Výše jistiny: ${val('mePrincipalLimit')}`:'',val('meLeadExecutor')?`Navržený vedoucí exekutor: ${val('meLeadExecutor')}`:'','',val('meExecutor1')?`Exekutor XX: ${val('meExecutor1')}`:'',val('meCases1')?`Exekuce u exekutora XX: ${val('meCases1')}`:'',val('meExecutor2')?`Exekutor YY: ${val('meExecutor2')}`:'',val('meCases2')?`Exekuce u exekutora YY: ${val('meCases2')}`:'','',val('meReasonText')?`Odůvodnění spojení: ${val('meReasonText')}`:'',val('meEvidence')?`Důkazy: ${val('meEvidence')}`:'','', 'PRÁVNÍ ZÁKLAD:','Návrh má být zpracován s odkazem na § 112 občanského soudního řádu a § 37 exekučního řádu.', '', 'NÁVRH:','Žádám, aby uvedená exekuční řízení byla spojena ke společnému řízení a aby byly náklady oprávněného a exekutora uplatněny jen jednou v souladu se zákonem.']; return lines.filter(Boolean).join('\n'); }
@@ -444,6 +574,7 @@ function bindEvents(){
   togglePostponementFields();
   toggleCooperationFields();
   toggleExclusionFields();
+  ensureExclusionItemRows();
   toggleMergeFields();
   toggleLawsuitFields();
   toggleCommonFormActions();
@@ -463,7 +594,11 @@ function bindEvents(){
   byId('commonDocxBtn')?.addEventListener('click', async()=>{ try{ await downloadDocx(); showToast('Soubor DOCX byl stažen.'); } catch(error){ showError(error.message);} });
   byId('commonPdfBtn')?.addEventListener('click',()=>{ if (byId('docContent')?.classList.contains('hidden')) { showError('Nejdřív vygenerujte listinu.'); return; } window.print(); });
   byId('seOpravnenyPO')?.addEventListener('change',toggleStopExecutionSubsections); byId('sePovinnyPO')?.addEventListener('change',toggleStopExecutionSubsections); byId('seSpouseActive')?.addEventListener('change',toggleStopExecutionSubsections); byId('seCostsActive')?.addEventListener('change',toggleStopExecutionSubsections); byId('seNoticeNotDelivered')?.addEventListener('change',toggleStopExecutionSubsections); document.querySelectorAll('input[name="seFilingType"]').forEach((el)=>el.addEventListener('change',toggleStopExecutionSubsections)); document.querySelectorAll('input[name="seNavrhovatelRole"]').forEach((el)=>el.addEventListener('change',toggleStopExecutionSubsections));
-  byId('peUntilDate')?.addEventListener('input',togglePostponementSubsections); byId('peMonths')?.addEventListener('input',togglePostponementSubsections);
+  byId('peUntilDate')?.addEventListener('input',togglePostponementSubsections); byId('peMonths')?.addEventListener('input',togglePostponementSubsections); 
+  byId('addExclusionItemBtn')?.addEventListener('click',()=>addExclusionItemRow());
+  byId('exItemsContainer')?.addEventListener('click',(e)=>{ const btn = e.target.closest('.ex-remove-item-btn'); if(!btn) return; const row = btn.closest('[data-ex-item]'); row?.remove(); ensureExclusionItemRows(); });  byId('addExclusionItemBtn')?.addEventListener('click',()=>addExclusionItemRow());
+  byId('exItemsContainer')?.addEventListener('click',(e)=>{ const btn = e.target.closest('.ex-remove-item-btn'); if(!btn) return; const row = btn.closest('[data-ex-item]'); row?.remove(); ensureExclusionItemRows(); });
+
   byId('aiGenerateBtn')?.addEventListener('click',async()=>{ try{ setLoading(true); const result=await generateDocumentViaServer(); renderDocument(result); showToast('Listina byla úspěšně vygenerována.'); } catch(error){ showError(error.message);} finally{ setLoading(false);} });
   byId('printBtn')?.addEventListener('click',()=>window.print());
   byId('downloadDocxBtn')?.addEventListener('click', async()=>{ try{ await downloadDocx(); showToast('Soubor DOCX byl stažen.'); } catch(error){ showError(error.message);} });
@@ -484,6 +619,7 @@ async function initApp(){
   togglePostponementFields();
   toggleCooperationFields();
   toggleExclusionFields();
+  ensureExclusionItemRows();
   toggleMergeFields();
   toggleLawsuitFields();
   toggleCommonFormActions();
@@ -491,46 +627,4 @@ async function initApp(){
   updateStatus();
 }
 
-function findContactByName(name) {
-  const needle = String(name || '').trim().toLowerCase();
-  if (!needle) return null;
-  for (const category of Object.keys(state.contactData)) {
-    for (const item of state.contactData[category] || []) {
-      if (String(item.nazev || '').toLowerCase().includes(needle)) {
-        return { ...item, category };
-      }
-    }
-  }
-  return null;
-}
-
 initApp();
-
-async function initApp(){
-  bindEvents();
-  try{
-    await loadContactsFromServer();
-
-    setPrompt('Žádost o součinnost');
-
-    const preferred = findContactByName('Exekutorský úřad');
-    if (preferred) {
-      state.selectedContact = preferred;
-      openContactDetail(preferred, preferred.category);
-      renderResults();
-    }
-
-  } catch(error){
-    console.error('Chyba při načítání kontaktů:', error);
-    showError(error.message);
-  }
-  toggleInstallmentFields();
-  toggleStopExecutionFields();
-  togglePostponementFields();
-  toggleCooperationFields();
-  toggleExclusionFields();
-  toggleMergeFields();
-  toggleLawsuitFields();
-  toggleCommonFormActions();
-  updateStatus();
-}

@@ -220,7 +220,7 @@ body {
 
 /* ====== FORMULÁŘE ====== */
 .field {
-  background: #e6f3ff !important;
+  background: #fffcf3 !important;
   color: var(--text) !important;
   border: 1px solid var(--line) !important;
 }

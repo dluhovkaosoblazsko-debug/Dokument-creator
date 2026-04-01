@@ -62,50 +62,41 @@
           <div id="results" class="results-list results-list-compact"></div>
 
           <div id="contactDetail" class="detail-inline hidden">
-            <div class="detail-inline-head">
-              <span id="detailTag" class="category-tag">KATEGORIE</span>
-              <button id="closeDetail" class="icon-btn icon-btn-light" type="button" aria-label="Zavřít detail">✕</button>
-            </div>
-
-            <h3 id="detailTitle" class="detail-title-inline">--</h3>
-            <p id="detailMesto" class="detail-subtitle-inline">--</p>
-
-            <div class="detail-inline-grid">
-  <div class="detail-inline-box">
-    <span class="detail-label">Datová schránka</span>
-    <div id="detailDS" class="detail-value detail-value-mono">--</div>
-  </div>
-
-  
-<div class="detail-inline-box">
-  <span class="detail-label">Web</span>
-  <div id="detailWeb" class="detail-value">--</div>
-</div>
-
-  <div class="detail-inline-box">
-    <span class="detail-label">Telefon</span>
-    <div id="detailTel" class="detail-value">--</div>
-  </div>
-
-  <div class="detail-inline-box">
-    <span class="detail-label">E-mail</span>
-    <div id="detailEmail" class="detail-value">--</div>
-  </div>
-
-  <div class="detail-inline-box detail-inline-box-wide">
-    <span class="detail-label">Otevírací doba</span>
-    <div id="detailHours" class="detail-value">--</div>
-  </div>
-</div>
-
-            <div class="preview-actions no-print" style="margin-top:12px; justify-content:flex-start;">
-              <button id="useAsRecipientBtn" class="btn btn-secondary btn-small" type="button">Použít jako adresáta</button>
-            </div>
-            <p id="recipientStatus" class="detail-subtitle-inline" style="margin-top:8px; color:#c7d2fe;">Adresát zatím není vybrán.</p>
-
-          </div>
-        </div>
-      </section>
+ <div class="detail-inline-head">
+ <span id="detailTag" class="category-tag">KATEGORIE</span>
+ <button id="closeDetail" class="icon-btn icon-btn-light" type="button" aria-label="Zavřít detail">✕</button>
+ </div>
+ <h3 id="detailTitle" class="detail-title-inline">--</h3>
+ <p id="detailMesto" class="detail-subtitle-inline">--</p>
+ <div class="detail-inline-grid">
+ <div class="detail-inline-box">
+ <span class="detail-label">Datová schránka</span>
+ <div id="detailDS" class="detail-value detail-value-mono">--</div>
+ </div>
+ <div class="detail-inline-box">
+ <span class="detail-label">Web</span>
+ <div id="detailWeb" class="detail-value">--</div>
+ </div>
+ <div class="detail-inline-box">
+ <span class="detail-label">Telefon</span>
+ <div id="detailTel" class="detail-value">--</div>
+ </div>
+ <div class="detail-inline-box">
+ <span class="detail-label">E-mail</span>
+ <div id="detailEmail" class="detail-value">--</div>
+ </div>
+ <div class="detail-inline-box detail-inline-box-wide">
+ <span class="detail-label">Otevírací doba</span>
+ <div id="detailHours" class="detail-value">--</div>
+ </div>
+ </div>
+ <div class="preview-actions no-print" style="margin-top:12px; justify-content:flex-start;">
+ <button id="useAsRecipientBtn" class="btn btn-secondary btn-small" type="button">Použít jako adresáta</button>
+ </div>
+ <p id="recipientStatus" class="detail-subtitle-inline" style="margin-top:8px; color:#c7d2fe;">Adresát zatím není vybrán.</p>
+ </div>
+ </div>
+ </section>
 
       <section class="right-col card editor-shell">
         <div class="editor-topbar editor-topbar-minimal">
@@ -150,7 +141,7 @@
           <div id="installmentFields" class="installment-box hidden">
             <div class="installment-head">
               <span class="quick-label">Údaje ke splátkovému kalendáři</span>
-              <button id="extractDebtBtn" class="btn btn-secondary btn-small" type="button">Načíst z PDF</button>
+              
             </div>
             <div class="installment-grid">
               <div>
@@ -347,16 +338,32 @@
               </div>
             </div>
             <div class="stop-form-section">
-              <div class="stop-form-title">Věc, která má být vyškrtnuta</div>
-              <div class="stop-grid stop-grid-2">
-                <div class="stop-col-span-2"><label class="detail-label">Popis věci / věcí</label><textarea id="exItemDescription" class="field textarea compact-textarea"></textarea></div>
-                <div><label class="detail-label">Datum soupisu</label><input id="exInventoryDate" class="field compact-field" type="date"></div>
-                <div><label class="detail-label">Číslo položky v soupisu</label><input id="exInventoryItemNo" class="field compact-field" type="text"></div>
-                <div class="stop-col-span-2"><label class="detail-label">Č. j. soupisu / označení soupisu</label><input id="exInventoryRecordNo" class="field compact-field" type="text"></div>
-              </div>
-            </div>
-            <div class="stop-form-section">
-              <div class="stop-form-title">Důvod vyškrtnutí</div>
+ <div class="stop-form-title">Věc, která má být vyškrtnuta</div>
+ <div class="stop-grid stop-grid-2">
+ <div><label class="detail-label">Datum soupisu</label><input id="exInventoryDate" class="field compact-field" type="date"></div>
+ <div><label class="detail-label">Č. j. soupisu / označení soupisu</label><input id="exInventoryRecordNo" class="field compact-field" type="text"></div>
+ </div>
+ <div class="stop-subsection">
+ <div class="installment-head" style="margin-bottom:8px;">
+ <span class="detail-label">Položky k vyškrtnutí</span>
+ <button id="addExclusionItemBtn" class="btn btn-secondary btn-small" type="button">Přidat další věc</button>
+ </div>
+ <div id="exItemsContainer" class="quick-actions">
+ <div class="installment-box exclusion-item-row" data-ex-item>
+ <div class="installment-head" style="margin-bottom:8px;">
+ <span class="quick-label">Položka 1</span>
+ <button class="btn btn-secondary btn-small ex-remove-item-btn hidden" type="button">Odebrat</button>
+ </div>
+ <div class="stop-grid stop-grid-2">
+ <div class="stop-col-span-2"><label class="detail-label">Popis věci</label><textarea class="field textarea compact-textarea ex-item-description"></textarea></div>
+ <div><label class="detail-label">Číslo položky v soupisu</label><input class="field compact-field ex-item-number" type="text"></div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="stop-form-section">
+ <div class="stop-form-title">Důvod vyškrtnutí</div>
               <div class="stop-grid stop-grid-1"><div><label class="detail-label">Proč věc nepatří povinnému</label><textarea id="exOwnershipReason" class="field textarea compact-textarea"></textarea></div></div>
             </div>
             <div class="stop-form-section">
