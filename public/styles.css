@@ -162,7 +162,7 @@ body {
 
 /* ====== RYCHLÉ VOLBY (Splátkový kalendář atd.) ====== */
 .quick-tag {
-  background: #020617 !important;
+  background: #3d5ada !important;
   border: 1px solid var(--line) !important;
   color: var(--text-soft) !important;
   border-radius: 14px !important;
