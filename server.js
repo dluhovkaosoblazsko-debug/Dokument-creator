@@ -147,7 +147,12 @@ function normalizeExekutorRecord(ex, idx) {
     tel,
     email,
     web,
-    oteviraciDoba: "---",
+    
+oteviraciDoba:
+  normalizeText(ex.oteviraci_doba_text) ||
+  normalizeText(ex.uredni_hodiny_osobni_text) ||
+  "---",
+
     category: "exekutori",
     source: normalizeText(ex.zdroj) || "default-exekutori",
     search: buildSearchText(fullName, fullAddress, mesto, ds, tel, email, web)
@@ -248,6 +253,7 @@ async function postToGemini(body) {
   return safeJsonParse(text);
 }
 
+
 async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
   const systemPrompt = [
     "Jsi přesný právní asistent.",
@@ -263,12 +269,26 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
     `Doplňující kontext: ${aiContext || "Bez dalšího kontextu."}`,
     "Tón: formální, věcný, úřední.",
     "Název listiny dej VELKÝMI PÍSMENY."
-  ].join("\n");
+  ].join("\\n");
+
+  const parts = [{ text: userQuery }];
+
+  if (pdfBase64) {
+    parts.push({
+      inlineData: {
+        mimeType: "application/pdf",
+        data: pdfBase64
+      }
+    });
+  }
 
   const parsed = await postToGemini({
     systemInstruction: { parts: [{ text: systemPrompt }] },
-    contents: [{ parts: [{ text: userQuery }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
-    generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
+    contents: [{ parts }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.2
+    }
   });
 
   return {
@@ -279,6 +299,7 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
     body: normalizeText(parsed.body) || ""
   };
 }
+
 
 async function extractDebtAmountFromPdf(pdfBase64) {
   const parsed = await postToGemini({
@@ -347,53 +368,54 @@ app.post("/api/import-json", upload.single("jsonDb"), (req, res) => {
   }
 });
 
-app.post("/api/extract-debt", upload.single("pdf"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "Chybí PDF soubor." });
-    if (req.file.mimetype !== "application/pdf") return res.status(400).json({ ok: false, error: "Soubor musí být PDF." });
-    const debtAmount = await extractDebtAmountFromPdf(req.file.buffer.toString("base64"));
-    res.json({ ok: true, debtAmount: debtAmount || "" });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: error.message || "Nepodařilo se načíst dlužnou částku z PDF." });
-  }
-});
-
-app.post("/api/extract-stop-execution", upload.single("pdf"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "Chybí PDF soubor." });
-    if (req.file.mimetype !== "application/pdf") return res.status(400).json({ ok: false, error: "Soubor musí být PDF." });
-    const data = await extractStopExecutionFromPdf(req.file.buffer.toString("base64"));
-    res.json({ ok: true, data });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: error.message || "Nepodařilo se vytěžit údaje z PDF." });
-  }
-});
 
 app.post("/api/generate", upload.single("pdf"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "Chybí PDF soubor." });
-    if (req.file.mimetype !== "application/pdf") return res.status(400).json({ ok: false, error: "Soubor musí být PDF." });
-
     const prompt = normalizeText(req.body.prompt);
     const aiContext = normalizeText(req.body.aiContext);
     const recipientRaw = req.body.recipient;
-    if (!prompt || prompt.length < 5) return res.status(400).json({ ok: false, error: "Prompt je příliš krátký." });
-    if (!recipientRaw) return res.status(400).json({ ok: false, error: "Chybí příjemce." });
 
-    let recipient;
-    try {
-      recipient = JSON.parse(recipientRaw);
-    } catch {
-      return res.status(400).json({ ok: false, error: "Příjemce není validní JSON." });
+    if (!prompt || prompt.length < 3) {
+      return res.status(400).json({ ok: false, error: "Prompt je příliš krátký." });
     }
-    if (!recipient?.nazev) return res.status(400).json({ ok: false, error: "Příjemce nemá název." });
 
-    const result = await callGemini({ prompt, aiContext, recipient, pdfBase64: req.file.buffer.toString("base64") });
+    let recipient = {
+      nazev: "Příjemce neuveden",
+      adresa: "",
+      mesto: "",
+      ds: ""
+    };
+
+    if (recipientRaw) {
+      try {
+        const parsedRecipient = JSON.parse(recipientRaw);
+        recipient = {
+          nazev: parsedRecipient?.nazev || "Příjemce neuveden",
+          adresa: parsedRecipient?.adresa || "",
+          mesto: parsedRecipient?.mesto || "",
+          ds: parsedRecipient?.ds || ""
+        };
+      } catch {
+        return res.status(400).json({ ok: false, error: "Příjemce není validní JSON." });
+      }
+    }
+
+    const result = await callGemini({
+      prompt,
+      aiContext,
+      recipient,
+      pdfBase64: req.file ? req.file.buffer.toString("base64") : null
+    });
+
     res.json({ ok: true, document: result });
   } catch (error) {
-    res.status(500).json({ ok: false, error: error.message || "Generování selhalo." });
+    res.status(500).json({
+      ok: false,
+      error: error.message || "Generování selhalo."
+    });
   }
 });
+
 
 app.post("/api/export-docx", async (req, res) => {
   try {

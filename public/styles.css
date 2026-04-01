@@ -1,8 +1,8 @@
 
 :root {
-  --bg: #f3f6fb;
-  --surface: #ffffff;
-  --surface-soft: #f8fafc;
+  --bg: #f5ebe3;
+  --surface: #ebe6e6;
+  --surface-soft: #92908e;
   --surface-muted: #eef4ff;
 
   --line: #dbe3ef;
@@ -16,7 +16,7 @@
   --indigo-dark: #1d4ed8;
   --indigo-soft: #dbeafe;
 
-  --green: #16a34a;
+  --green: #cde7d6;
   --amber: #d97706;
 
   --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
@@ -52,64 +52,69 @@
 @media (max-width:860px){.app-shell{padding:14px}.topbar{flex-direction:column;align-items:stretch}.header-actions{width:100%;flex-direction:column;align-items:stretch}.context-top-btn,.upload-box{width:100%}.detail-inline-grid,.doc-meta,.installment-grid,.stop-grid-2{grid-template-columns:1fr}.stop-col-span-2{grid-column:auto}.document-paper{padding:28px 22px;min-height:auto}.doc-header{display:grid;gap:20px}.doc-party,.doc-party-right{width:100%;text-align:left}}
 @media print{body{background:#e6aeae!important}.topbar,.left-col,.editor-topbar-minimal,.editor-inputs,.preview-actions,#toast{display:none!important}.app-shell{max-width:100%;padding:0}.layout-grid{display:block}.right-col{border:0;box-shadow:none}.preview-area{background:#fff;padding:0;overflow:visible}.doc-wrap{display:block!important}.document-paper{max-width:100%;box-shadow:none;border:0;padding:1cm;min-height:auto}}
 
-/* ===== JEDNODUCHÉ CELKOVÉ PŘEBARVENÍ A VYLADĚNÍ ===== */
+/* =========================================================
+   TMAVŠÍ ADMIN STYL – PŘEHLEDNÝ A KLIDNÝ
+   VLOŽIT CELÝ BLOK NA KONEC styles.css
+   ========================================================= */
 
+/* ====== ZÁKLADNÍ BAREVNÁ PALETA ======
+   Tady měníš CELKOVÝ TÓN aplikace
+*/
 :root {
-  --bg: #f3f6fb !important;
-  --surface: #ffffff !important;
-  --surface-soft: #f8fafc !important;
-  --surface-muted: #eef4ff !important;
+  --bg: #414653;               /* pozadí celé stránky */
+  --surface: #111827;          /* karty, panely */
+  --surface-soft: #1f2933;     /* jemné boxy, formuláře */
+  --surface-muted: #020617;    /* méně důležité pozadí */
 
-  --line: #dbe3ef !important;
-  --line-soft: #e8eef7 !important;
+  --line: #334155;             /* okraje */
+  --line-soft: #1e293b;
 
-  --text: #0f172a !important;
-  --text-soft: #334155 !important;
-  --text-muted: #64748b !important;
+  --text: #777777;             /* hlavní text */
+  --text-soft: #ffffff;        /* běžný text */
+  --text-muted: #c9c9c9;       /* popisky, drobnosti */
 
-  --indigo: #2563eb !important;
-  --indigo-dark: #1d4ed8 !important;
-  --indigo-soft: #dbeafe !important;
+  --accent: #0c85aa;           /* hlavní modrá */
+  --accent-dark: #8a97b3;
+  --accent-soft: #1e40af;
 
-  --green: #16a34a !important;
-  --amber: #d97706 !important;
+  --success: #22c55e;
+  --warning: #f59e0b;
 
-  --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
-  --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12) !important;
+  --shadow-sm: 0 10px 30px rgba(0,0,0,0.4);
+  --shadow-lg: 0 30px 60px rgba(0,0,0,0.6);
 }
 
+/* ====== STRÁNKA ====== */
 body {
   background: var(--bg) !important;
   color: var(--text) !important;
 }
 
-.app-shell {
-  padding: 24px !important;
-}
-
-/* Oprava šířek sloupců */
+/* ====== ROZLOŽENÍ SLOUPCŮ ======
+   Levý panel / Pravý panel
+*/
 .layout-grid {
   display: grid !important;
-  grid-template-columns: minmax(360px, 460px) minmax(0, 1fr) !important;
-  gap: 14px !important;
-  align-items: start !important;
+  grid-template-columns: minmax(360px, 460px) minmax(8, 1fr) !important;
+  gap: 16px !important;
 }
 
-/* Karty a panely */
+/* ====== KARTY A PANELY ====== */
 .card {
   background: var(--surface) !important;
-  border: 1px solid var(--line) !important;
+  border: 5px solid var(--line) !important;
   box-shadow: var(--shadow-sm) !important;
 }
 
-/* Horní lišta */
+/* ====== HORNÍ LIŠTA ====== */
 .topbar {
-  background: #fff1b3 !important;
+  background: #fff3f3(--surface) !important;
+  border-bottom: 4px solid var(--line) !important;
 }
 
 .brand-icon {
-  background: var(--indigo) !important;
-  color: #ffffff !important;
+  background: var(--accent) !important;
+  color: #fff3f3 !important;
 }
 
 .brand-title {
@@ -120,286 +125,200 @@ body {
   color: var(--text-muted) !important;
 }
 
-/* Hlavní tlačítka */
+/* ====== HLAVNÍ TLAČÍTKA ====== */
 .btn-primary {
-  background: var(--indigo) !important;
+  background: var(--accent) !important;
   color: #ffffff !important;
-  border-color: var(--indigo-dark) !important;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18) !important;
+  border-color: var(--accent-dark) !important;
 }
 
 .btn-primary:hover {
-  background: var(--indigo-dark) !important;
-  color: #ffffff !important;
+  background: var(--accent-dark) !important;
 }
 
 .btn-secondary {
   background: var(--surface-soft) !important;
   color: var(--text-soft) !important;
-  border-color: var(--line) !important;
+  border: 1px solid var(--line) !important;
 }
 
 .btn-secondary:hover {
-  background: #eef4ff !important;
-  color: var(--text) !important;
-  border-color: #bfd4ff !important;
+  background: #273449 !important;
 }
 
-/* PDF box */
+/* ====== PDF NAHRÁNÍ ====== */
 .upload-box {
-  border: 4px solid #8cd147 !important;
-  background: #ffffff !important;
+  background: var(--surface-soft) !important;
+  border: 1px solid var(--line) !important;
 }
 
 .upload-link-inline {
-  color: #1e3a5f !important;
+  color: var(--accent) !important;
 }
 
-.upload-inline-label,
-.eyebrow,
-.quick-label,
-.doc-label,
-.detail-label,
-.upload-label {
+.upload-inline-label {
   color: var(--text-muted) !important;
 }
 
-/* Kategorie */
-.filter-btn {
-  color: var(--text-soft) !important;
-}
-
-.filter-btn:hover {
-  background: #eef4ff !important;
-}
-
-.filter-btn.active {
-  background: #1e3a5f !important;
-  color: #ffffff !important;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12) !important;
-}
-
-/* Vyhledávání */
-.search-box {
-  background: #fffacf !important;
-  border: 1px solid var(--line) !important;
-}
-
-.search-icon {
-  color: #64748b !important;
-}
-
-/* Seznam kontaktů */
-.results-list-compact {
-  background: linear-gradient(180deg, #a9ceff, #025abe) !important;
-  border: 1px solid var(--line-soft) !important;
-}
-
-.contact-row {
-  background: #ffffff !important;
-  border: 1px solid var(--line-soft) !important;
-}
-
-.contact-row:hover {
-  background: #f8fbff !important;
-}
-
-.contact-row.selected {
-  background: #f7ffe0 !important;
-  border-left-color: #2563eb !important;
-  box-shadow: inset 0 0 0 1px #cfe0ff !important;
-}
-
-.contact-title {
-  color: var(--text) !important;
-}
-
-.contact-subtitle {
-  color: var(--text-muted) !important;
-}
-
-/* Štítky kategorií */
-.cat-exekutori {
-  background: #fee2e2 !important;
-  color: #000000 !important;
-}
-
-.cat-banky {
-  background: #dcfce7 !important;
-  color: #166534 !important;
-}
-
-.cat-ossz {
-  background: #fef3c7 !important;
-  color: #92400e !important;
-}
-
-.cat-pojistovny {
-  background: #dbeafe !important;
-  color: #1d4ed8 !important;
-}
-
-.cat-soudy {
-  background: #ede9fe !important;
-  color: #6d28d9 !important;
-}
-
-/* Rozkliknutý kontakt */
-.detail-inline {
-  background: linear-gradient(135deg, #6798d8 0%, #454457 50%) !important;
-  color: #ffffff !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
-}
-
-.detail-subtitle-inline {
-  color: #00b1b8 !important;
-}
-
-.detail-inline-box {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-}
-
-.detail-inline-box .detail-label {
-  color: #cfe0ff !important;
-}
-
-/* Stav */
-.status-dot {
-  background: #4783cc !important;
-}
-
-.status-text {
-  color: var(--text-soft) !important;
-}
-
-/* Pole a formuláře */
-.field {
-  background: #d5ffde !important;
-  color: var(--text) !important;
-  border: 1px solid var(--line) !important;
-}
-
-.field:focus {
-  border-color: #041406 !important;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10) !important;
-}
-
-.context-box {
-  background: #eef4ff !important;
-  border-color: #c7d2fe !important;
-}
-
-.installment-box,
-.stop-form {
-  background: #f8fafc !important;
-  border: 1px solid var(--line) !important;
-}
-
-.stop-form-title {
-  color: var(--text-soft) !important;
-}
-
-/* Rychlé volby */
+/* ====== RYCHLÉ VOLBY (Splátkový kalendář atd.) ====== */
 .quick-tag {
-  background: #eef4ff !important;
-  border: 1px solid #c7d7f2 !important;
-  color: #1e3a5f !important;
+  background: #020617 !important;
+  border: 1px solid var(--line) !important;
+  color: var(--text-soft) !important;
   border-radius: 14px !important;
-  padding: 8px 12px !important;
+  padding: 8px 14px !important;
   font-size: 12px !important;
   font-weight: 700 !important;
 }
 
 .quick-tag:hover {
-  background: #dbeafe !important;
-  color: #1d4ed8 !important;
-  border-color: #93c5fd !important;
+  background: var(--accent-soft) !important;
+  color: #fff !important;
 }
 
-/* Náhled dokumentu */
-.preview-area {
-  background: #edf2f7 !important;
-}
-
-.placeholder-box {
-  color: var(--text-muted) !important;
-}
-
-.placeholder-icon {
-  background: #ffffff !important;
+/* ====== VYHLEDÁVÁNÍ ====== */
+.search-box {
+  background: var(--surface-soft) !important;
   border: 1px solid var(--line) !important;
 }
 
-.document-paper {
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
+.search-icon {
+  color: var(--text-muted) !important;
 }
 
-.doc-title,
-.doc-main-title {
+/* ====== SEZNAM KONTAKTŮ ====== */
+.results-list-compact {
+  background: var(--surface-muted) !important;
+  border: 1px solid var(--line-soft) !important;
+}
+
+.contact-row {
+  background: var(--surface) !important;
+  border: 1px solid var(--line-soft) !important;
+}
+
+.contact-row:hover {
+  background: #1e293b !important;
+}
+
+.contact-row.selected {
+  background: #1e40af !important;
+  border-left: 10px solid var(--accent) !important;
+}
+
+/* ====== DETAIL KONTAKTU ====== */
+.detail-inline {
+  background: linear-gradient(135deg, #020617, #0f172a) !important;
   color: var(--text) !important;
+  border-radius: 16px !important;
 }
 
-.doc-address,
-.doc-meta-value,
-.doc-body {
-  color: #6883a8 !important;
+.detail-inline-box {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid var(--line-soft) !important;
 }
 
-/* Toast */
+/* ====== FORMULÁŘE ====== */
+.field {
+  background: #e6f3ff !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.field:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.3) !important;
+}
+
+.installment-box,
+.stop-form {
+  background: var(--surface-soft) !important;
+  border: 1px solid var(--line) !important;
+}
+
+/* ====== NÁHLED DOKUMENTU ====== */
+.preview-area {
+  background: #020617 !important;
+}
+
+.document-paper {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+/* ====== TOAST ====== */
 #toast {
-  background: #364a74 !important;
-  color: #ffffff !important;
+  background: #020617 !important;
+  color: #fff !important;
 }
 
-/* Tisk */
+/* ====== TISK ====== */
 @media print {
-  body {
-    background: #ffffff !important;
-  }
-
-  .topbar,
-  .left-col,
-  .editor-topbar-minimal,
-  .editor-inputs,
-  .preview-actions,
-  #toast {
-    display: none !important;
-  }
-
-  .app-shell {
-    max-width: 100% !important;
-    padding: 0 !important;
-  }
-
-  .layout-grid {
-    display: block !important;
-  }
-
-  .right-col {
-    border: 0 !important;
-    box-shadow: none !important;
-  }
-
-  .preview-area {
-    background: #ffffff !important;
-    padding: 0 !important;
-    overflow: visible !important;
-  }
-
-  .doc-wrap {
-    display: block !important;
-  }
-
-  .document-paper {
-    max-width: 100% !important;
-    box-shadow: none !important;
-    border: 0 !important;
-    padding: 5cm !important;
-    min-height: auto !important;
-  }
+  body { background: #fff !important; }
 }
 
+
+/* Zmenšení všech formulářů */
+.stop-form-section {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+}
+
+.stop-form-title {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.detail-label {
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.stop-grid {
+  gap: 8px;
+}
+
+.field.compact-field {
+  min-height: 20px;
+  height: 20px;
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.field.textarea.compact-textarea {
+  min-height: 70px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.radio-row,
+.checkbox-row {
+  gap: 10px;
+  row-gap: 6px;
+}
+
+.radio-row label,
+.checkbox-row label {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.stop-subsection {
+  margin-top: 8px;
+}
+
+.installment-grid {
+  gap: 8px;
+}
+
+.installment-box {
+  padding: 10px 12px;
+}
+
+.quick-label {
+  font-size: 12px;
+}
 
