@@ -491,4 +491,46 @@ async function initApp(){
   updateStatus();
 }
 
+function findContactByName(name) {
+  const needle = String(name || '').trim().toLowerCase();
+  if (!needle) return null;
+  for (const category of Object.keys(state.contactData)) {
+    for (const item of state.contactData[category] || []) {
+      if (String(item.nazev || '').toLowerCase().includes(needle)) {
+        return { ...item, category };
+      }
+    }
+  }
+  return null;
+}
+
 initApp();
+
+async function initApp(){
+  bindEvents();
+  try{
+    await loadContactsFromServer();
+
+    setPrompt('Žádost o součinnost');
+
+    const preferred = findContactByName('Exekutorský úřad');
+    if (preferred) {
+      state.selectedContact = preferred;
+      openContactDetail(preferred, preferred.category);
+      renderResults();
+    }
+
+  } catch(error){
+    console.error('Chyba při načítání kontaktů:', error);
+    showError(error.message);
+  }
+  toggleInstallmentFields();
+  toggleStopExecutionFields();
+  togglePostponementFields();
+  toggleCooperationFields();
+  toggleExclusionFields();
+  toggleMergeFields();
+  toggleLawsuitFields();
+  toggleCommonFormActions();
+  updateStatus();
+}

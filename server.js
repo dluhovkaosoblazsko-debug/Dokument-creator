@@ -254,22 +254,104 @@ async function postToGemini(body) {
 }
 
 
+
+function detectDocumentType(prompt = "", aiContext = "") {
+  const text = `${normalizeText(prompt)} ${normalizeText(aiContext)}`.toLowerCase();
+  if (text.includes("splátkový kalendář") || text.includes("splatkovy kalendar")) return "installment";
+  if (text.includes("zastavení exekuce") || text.includes("zastaveni exekuce")) return "stop_execution";
+  if (text.includes("odklad exekuce") || text.includes("odklad výkonu") || text.includes("odklad vykonu")) return "postponement";
+  if (text.includes("součinnost") || text.includes("soucinnost")) return "cooperation";
+  if (text.includes("vyškrtnutí ze soupisu") || text.includes("vyškrtnuti ze soupisu")) return "exclusion";
+  if (text.includes("sloučení exekucí") || text.includes("slouceni exekuci")) return "merge_executions";
+  if (text.includes("vylučovací žaloba") || text.includes("vylucovaci zaloba")) return "exclusion_lawsuit";
+  if (text.includes("přerušení oddlužení") || text.includes("preruseni oddluzeni")) return "debt_relief_pause";
+  if (text.includes("odpor proti platebnímu rozkazu") || text.includes("odpor proti platebnimu rozkazu")) return "payment_order_opposition";
+  return "generic";
+}
+
+function getDocumentProfile(type) {
+  const profiles = {
+    installment: {
+      label: "NÁVRH SPLÁTKOVÉHO KALENDÁŘE",
+      system: "Jde o návrh dobrovolného splátkového kalendáře adresovaný věřiteli nebo instituci. Nejde o soudní žalobu ani procesní návrh. Piš smírně, věcně a prakticky. Nenazývej text uznáním dluhu, pokud to výslovně neplyne z kontextu.",
+      user: "Uveď realistický návrh splácení, důvod žádosti a zdůrazni snahu o dobrovolné řešení závazku."
+    },
+    stop_execution: {
+      label: "NÁVRH NA ZASTAVENÍ EXEKUCE",
+      system: "Jde o procesní návrh na zastavení exekuce. Text musí mít styl formálního procesního podání. V závěru musí být jasný návrh, aby exekuce byla zastavena v uvedeném rozsahu. Pracuj přesně se skutkovými tvrzeními, důvody a důkazy uvedenými v kontextu.",
+      user: "Zachovej procesní styl a odděl skutkový stav, právní důvody, důkazy a návrh výroku."
+    },
+    postponement: {
+      label: "ŽÁDOST O ODKLAD EXEKUCE",
+      system: "Jde o žádost o odklad exekuce. Nejde o zastavení exekuce ani o žalobu. Zdůrazni dočasnost překážek, přiměřenost odkladu a očekávané obnovení plnění nebo jiné řešení.",
+      user: "Popiš konkrétní důvody odkladu, navrženou dobu a očekávaný další vývoj."
+    },
+    cooperation: {
+      label: "ŽÁDOST O SOUČINNOST",
+      system: "Jde o žádost o součinnost nebo poskytnutí informací či listin. Nejde o žalobu ani o návrh na soudní rozhodnutí. Text má být stručný, věcný a přesně popsat, jakou součinnost má adresát poskytnout.",
+      user: "Uveď přesně, co se žádá, proč je to potřebné a v jaké přiměřené lhůtě má být součinnost poskytnuta."
+    },
+    exclusion: {
+      label: "NÁVRH NA VYŠKRTNUTÍ VĚCI ZE SOUPISU EXEKUCE",
+      system: "Jde o návrh na vyškrtnutí věci ze soupisu exekuce. Důraz dej na tvrzení o vlastnictví třetí osoby nebo jiném právu vylučujícím soupis. Uveď popis věci, důvody, důkazy a jasný návrh na vyškrtnutí.",
+      user: "Zdůrazni vlastnické právo, identifikaci věci a důkazy, které vlastnictví podporují."
+    },
+    merge_executions: {
+      label: "NÁVRH NA SLOUČENÍ EXEKUCÍ",
+      system: "Jde o návrh na spojení nebo sloučení exekučních řízení. Text má být procesní, přehledný a musí vysvětlit, proč je spojení účelné a hospodárné. V závěru formuluj jasný návrh na spojení řízení.",
+      user: "Zvýrazni společného oprávněného, totožnost účastníků, přehled řízení a důvody hospodárnosti."
+    },
+    exclusion_lawsuit: {
+      label: "VYLUČOVACÍ ŽALOBA",
+      system: "Jde o vylučovací žalobu podávanou k soudu. Text musí mít procesní soudní styl a zřetelně oddělené účastníky, skutkový stav, důkazy a žalobní návrh. Nejde o pouhou žádost ani dopis exekutorovi.",
+      user: "V závěru uveď žalobní petit směřující k vyloučení věci z exekuce a případně i návrh na náhradu nákladů."
+    },
+    debt_relief_pause: {
+      label: "ŽÁDOST O PŘERUŠENÍ ODDLUŽENÍ",
+      system: "Jde o žádost v insolvenční věci o přerušení oddlužení. Nejde o exekuční podání. Text má zdůraznit dočasné překážky plnění, jejich závažnost a očekávané obnovení řádného plnění.",
+      user: "Uveď důvody přerušení, navrženou dobu a informaci, jak a kdy se má obnovit plnění povinností."
+    },
+    payment_order_opposition: {
+      label: "ODPOR PROTI PLATEBNÍMU ROZKAZU",
+      system: "Jde o procesní odpor proti platebnímu rozkazu. Text má mít procesní charakter a musí jasně uvést, že je podáván v zákonné lhůtě. Nejde o odvolání ani obecnou námitku.",
+      user: "Zdůrazni, že jde o odpor, uveď identifikaci rozhodnutí a stručné, ale konkrétní odůvodnění, pokud je v kontextu k dispozici."
+    },
+    generic: {
+      label: "ÚŘEDNÍ LISTINA",
+      system: "Jde o obecnou formální úřední listinu. Piš věcně, přehledně a bez vymýšlení skutečností.",
+      user: "Použij poskytnutý kontext a vytvoř logicky strukturované podání nebo dopis podle jeho obsahu."
+    }
+  };
+  return profiles[type] || profiles.generic;
+}
+
 async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
+  const documentType = detectDocumentType(prompt, aiContext);
+  const profile = getDocumentProfile(documentType);
+
   const systemPrompt = [
     "Jsi přesný právní asistent.",
-    "Vytvoř formální úřední listinu v češtině.",
+    `Typ dokumentu: ${profile.label}.`,
+    profile.system,
+    "Vytvoř formální úřední listinu v češtině odpovídající typu dokumentu.",
     "Použij údaje o odesílateli z přiloženého PDF, pokud jsou čitelné.",
     `Příjemce: ${recipient.nazev}, adresa nebo město: ${recipient.adresa || recipient.mesto}, datová schránka: ${recipient.ds}.`,
+    "Nevymýšlej skutková tvrzení, data ani právní důvody, které nejsou v promptu, kontextu nebo PDF.",
+    "Pokud některý údaj chybí, napiš text neutrálně a bez doplňování smyšlených detailů.",
+    "Tělo listiny musí být věcné, přehledné a přizpůsobené konkrétnímu typu podání.",
     "Vrať pouze validní JSON bez markdownu.",
     'Použij schéma: {"senderName":"","senderAddress":"","refData":"","title":"","body":""}'
   ].join(" ");
 
   const userQuery = [
     `Účel listiny: ${prompt}`,
+    `Rozpoznaný typ listiny: ${profile.label}`,
+    `Doplňující pokyn pro tento typ: ${profile.user}`,
     `Doplňující kontext: ${aiContext || "Bez dalšího kontextu."}`,
     "Tón: formální, věcný, úřední.",
-    "Název listiny dej VELKÝMI PÍSMENY."
-  ].join("\\n");
+    "Název listiny dej VELKÝMI PÍSMENY.",
+    "Pokud jde o procesní podání, zakonči text jasným návrhem nebo petitem odpovídajícím danému typu listiny."
+  ].join("\n");
 
   const parts = [{ text: userQuery }];
 
@@ -287,7 +369,7 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
     contents: [{ parts }],
     generationConfig: {
       responseMimeType: "application/json",
-      temperature: 0.2
+      temperature: 0.15
     }
   });
 
@@ -295,11 +377,10 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
     senderName: normalizeText(parsed.senderName) || "Neuvedeno",
     senderAddress: normalizeText(parsed.senderAddress) || "Neuvedeno",
     refData: normalizeText(parsed.refData) || "---",
-    title: normalizeText(parsed.title) || "ÚŘEDNÍ LISTINA",
+    title: normalizeText(parsed.title) || profile.label,
     body: normalizeText(parsed.body) || ""
   };
 }
-
 
 async function extractDebtAmountFromPdf(pdfBase64) {
   const parsed = await postToGemini({
