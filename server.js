@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx";
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Header } from "docx";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -23,7 +23,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 if (!GEMINI_API_KEY) {
-  console.error("Chybí GEMINI_API_KEY v .env");
+  console.error("ChybÄ‚Â­ GEMINI_API_KEY v .env");
   process.exit(1);
 }
 
@@ -57,7 +57,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 
-  // ✅ KLÍČOVÝ ŘÁDEK PRO RENDER
+  // Ă˘Ĺ›â€¦ KLÄ‚Ĺ¤Ă„ĹšOVÄ‚ĹĄ ÄąÂÄ‚ÂDEK PRO RENDER
   keyGenerator: (req) => req.ip
 });
 
@@ -84,128 +84,128 @@ const DATA_FILES = [
 ];
 
 const PDF_RELEVANCE_RULES = `
-### OBECNÉ PRAVIDLO PRO ČTENÍ PDF A POSOUZENÍ RELEVANCE DAT
+### OBECNÄ‚â€° PRAVIDLO PRO Ă„ĹšTENÄ‚Ĺ¤ PDF A POSOUZENÄ‚Ĺ¤ RELEVANCE DAT
 
-Vždy nejprve přečti celé PDF, ne pouze první stránku, první blok textu nebo první rozpoznanou sekci.
+VÄąÄľdy nejprve pÄąâ„˘eĂ„Ĺ¤ti celÄ‚Â© PDF, ne pouze prvnÄ‚Â­ strÄ‚Ë‡nku, prvnÄ‚Â­ blok textu nebo prvnÄ‚Â­ rozpoznanou sekci.
 
-Nejprve určete typ dokumentu podle jeho obsahu, například:
-- exekuční návrh
-- usnesení
+Nejprve urĂ„Ĺ¤ete typ dokumentu podle jeho obsahu, napÄąâ„˘Ä‚Â­klad:
+- exekuĂ„Ĺ¤nÄ‚Â­ nÄ‚Ë‡vrh
+- usnesenÄ‚Â­
 - rozsudek
-- výzva
-- formulář
-- insolvenční návrh
-- návrh na oddlužení
-- žaloba
-- vyjádření
-- jiné procesní podání
+- vÄ‚Ëťzva
+- formulÄ‚Ë‡Äąâ„˘
+- insolvenĂ„Ĺ¤nÄ‚Â­ nÄ‚Ë‡vrh
+- nÄ‚Ë‡vrh na oddluÄąÄľenÄ‚Â­
+- ÄąÄľaloba
+- vyjÄ‚Ë‡dÄąâ„˘enÄ‚Â­
+- jinÄ‚Â© procesnÄ‚Â­ podÄ‚Ë‡nÄ‚Â­
 
-Teprve po určení typu dokumentu posuď, které údaje jsou pro daný typ dokumentu relevantní.
+Teprve po urĂ„Ĺ¤enÄ‚Â­ typu dokumentu posuĂ„Ĺą, kterÄ‚Â© Ä‚Ĺźdaje jsou pro danÄ‚Ëť typ dokumentu relevantnÄ‚Â­.
 
-Při extrakci nikdy neignoruj identifikační údaje účastníků jen proto, že nejsou v záhlaví nebo na první stránce. Relevantní údaje mohou být uvedeny také:
-- v označení účastníků
-- v odůvodnění
-- ve výroku
-- v tabulkách
-- v přílohách
-- v poznámkách
-- v dalších blocích dokumentu
+PÄąâ„˘i extrakci nikdy neignoruj identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ» jen proto, ÄąÄľe nejsou v zÄ‚Ë‡hlavÄ‚Â­ nebo na prvnÄ‚Â­ strÄ‚Ë‡nce. RelevantnÄ‚Â­ Ä‚Ĺźdaje mohou bÄ‚Ëťt uvedeny takÄ‚Â©:
+- v oznaĂ„Ĺ¤enÄ‚Â­ Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ»
+- v odÄąĹ»vodnĂ„â€şnÄ‚Â­
+- ve vÄ‚Ëťroku
+- v tabulkÄ‚Ë‡ch
+- v pÄąâ„˘Ä‚Â­lohÄ‚Ë‡ch
+- v poznÄ‚Ë‡mkÄ‚Ë‡ch
+- v dalÄąË‡Ä‚Â­ch blocÄ‚Â­ch dokumentu
 
-U každého účastníka vždy aktivně hledej a využij všechny relevantní identifikační údaje, zejména:
-- jméno a příjmení / název subjektu
-- adresa bydliště / sídla / doručovací adresa
-- datum narození
-- rodné číslo
-- IČO
-- datová schránka
+U kaÄąÄľdÄ‚Â©ho Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka vÄąÄľdy aktivnĂ„â€ş hledej a vyuÄąÄľij vÄąË‡echny relevantnÄ‚Â­ identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje, zejmÄ‚Â©na:
+- jmÄ‚Â©no a pÄąâ„˘Ä‚Â­jmenÄ‚Â­ / nÄ‚Ë‡zev subjektu
+- adresa bydliÄąË‡tĂ„â€ş / sÄ‚Â­dla / doruĂ„Ĺ¤ovacÄ‚Â­ adresa
+- datum narozenÄ‚Â­
+- rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo
+- IĂ„ĹšO
+- datovÄ‚Ë‡ schrÄ‚Ë‡nka
 - e-mail
 - telefon
-- další identifikátory, pokud jsou zjevně součástí identifikace účastníka
+- dalÄąË‡Ä‚Â­ identifikÄ‚Ë‡tory, pokud jsou zjevnĂ„â€ş souĂ„Ĺ¤Ä‚Ë‡stÄ‚Â­ identifikace Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka
 
-Pokud dokument nepoužívá výrazy „povinný“ a „oprávněný“, mapuj role podle významu a typu dokumentu:
-- exekuce: oprávněný / povinný
-- insolvence a oddlužení: věřitel / dlužník
-- civilní řízení: žalobce / žalovaný
-- návrhová řízení: navrhovatel / odpůrce
-- obecně: účastník řízení podle významu v textu
+Pokud dokument nepouÄąÄľÄ‚Â­vÄ‚Ë‡ vÄ‚Ëťrazy Ă˘â‚¬ĹľpovinnÄ‚ËťĂ˘â‚¬Ĺ› a Ă˘â‚¬ĹľoprÄ‚Ë‡vnĂ„â€şnÄ‚ËťĂ˘â‚¬Ĺ›, mapuj role podle vÄ‚Ëťznamu a typu dokumentu:
+- exekuce: oprÄ‚Ë‡vnĂ„â€şnÄ‚Ëť / povinnÄ‚Ëť
+- insolvence a oddluÄąÄľenÄ‚Â­: vĂ„â€şÄąâ„˘itel / dluÄąÄľnÄ‚Â­k
+- civilnÄ‚Â­ Äąâ„˘Ä‚Â­zenÄ‚Â­: ÄąÄľalobce / ÄąÄľalovanÄ‚Ëť
+- nÄ‚Ë‡vrhovÄ‚Ë‡ Äąâ„˘Ä‚Â­zenÄ‚Â­: navrhovatel / odpÄąĹ»rce
+- obecnĂ„â€ş: Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­k Äąâ„˘Ä‚Â­zenÄ‚Â­ podle vÄ‚Ëťznamu v textu
 
-Při více výskytech stejného údaje použij tento prioritní princip:
-1. údaj výslovně přiřazený ke konkrétní osobě nebo subjektu
-2. údaj uvedený v sekci označení účastníků
-3. údaj uvedený ve formulářovém poli
-4. údaj uvedený jinde v textu, pokud je zjevně přiřaditelný ke konkrétnímu účastníkovi
+PÄąâ„˘i vÄ‚Â­ce vÄ‚Ëťskytech stejnÄ‚Â©ho Ä‚Ĺźdaje pouÄąÄľij tento prioritnÄ‚Â­ princip:
+1. Ä‚Ĺźdaj vÄ‚ËťslovnĂ„â€ş pÄąâ„˘iÄąâ„˘azenÄ‚Ëť ke konkrÄ‚Â©tnÄ‚Â­ osobĂ„â€ş nebo subjektu
+2. Ä‚Ĺźdaj uvedenÄ‚Ëť v sekci oznaĂ„Ĺ¤enÄ‚Â­ Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ»
+3. Ä‚Ĺźdaj uvedenÄ‚Ëť ve formulÄ‚Ë‡Äąâ„˘ovÄ‚Â©m poli
+4. Ä‚Ĺźdaj uvedenÄ‚Ëť jinde v textu, pokud je zjevnĂ„â€ş pÄąâ„˘iÄąâ„˘aditelnÄ‚Ëť ke konkrÄ‚Â©tnÄ‚Â­mu Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kovi
 
-Pokud existuje více adres, rozlišuj podle významu:
-- trvalé bydliště
-- doručovací adresa
-- sídlo
+Pokud existuje vÄ‚Â­ce adres, rozliÄąË‡uj podle vÄ‚Ëťznamu:
+- trvalÄ‚Â© bydliÄąË‡tĂ„â€ş
+- doruĂ„Ĺ¤ovacÄ‚Â­ adresa
+- sÄ‚Â­dlo
 - provozovna
 
-Pokud typ adresy není jasný, použij ji jako obecnou adresu účastníka.
+Pokud typ adresy nenÄ‚Â­ jasnÄ‚Ëť, pouÄąÄľij ji jako obecnou adresu Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka.
 
-Nevynechávej relevantní údaje jen proto, že nejsou požadovány ve všech typech dokumentů. Vždy posuzuj relevanci vzhledem ke konkrétnímu typu dokumentu.
+NevynechÄ‚Ë‡vej relevantnÄ‚Â­ Ä‚Ĺźdaje jen proto, ÄąÄľe nejsou poÄąÄľadovÄ‚Ë‡ny ve vÄąË‡ech typech dokumentÄąĹ». VÄąÄľdy posuzuj relevanci vzhledem ke konkrÄ‚Â©tnÄ‚Â­mu typu dokumentu.
 
-Pokud je údaj v PDF uveden jasně a je relevantní pro identifikaci účastníka nebo pro vyplnění výsledného dokumentu, použij jej.
+Pokud je Ä‚Ĺźdaj v PDF uveden jasnĂ„â€ş a je relevantnÄ‚Â­ pro identifikaci Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka nebo pro vyplnĂ„â€şnÄ‚Â­ vÄ‚ËťslednÄ‚Â©ho dokumentu, pouÄąÄľij jej.
 
-Pokud je údaj nečitelný, neúplný nebo nejistý:
-- nevymýšlej ho
-- nedopočítávej ho
-- nepřepisuj ho odhadem
-- ponech odpovídající pole prázdné
+Pokud je Ä‚Ĺźdaj neĂ„Ĺ¤itelnÄ‚Ëť, neÄ‚ĹźplnÄ‚Ëť nebo nejistÄ‚Ëť:
+- nevymÄ‚ËťÄąË‡lej ho
+- nedopoĂ„Ĺ¤Ä‚Â­tÄ‚Ë‡vej ho
+- nepÄąâ„˘episuj ho odhadem
+- ponech odpovÄ‚Â­dajÄ‚Â­cÄ‚Â­ pole prÄ‚Ë‡zdnÄ‚Â©
 
-Pokud je v dokumentu dostatek údajů pro rozpoznání role osoby, ale role není pojmenována přesně, určete ji podle kontextu dokumentu.
+Pokud je v dokumentu dostatek Ä‚ĹźdajÄąĹ» pro rozpoznÄ‚Ë‡nÄ‚Â­ role osoby, ale role nenÄ‚Â­ pojmenovÄ‚Ë‡na pÄąâ„˘esnĂ„â€ş, urĂ„Ĺ¤ete ji podle kontextu dokumentu.
 
-Cílem je vždy:
-- přečíst celé PDF
-- určit typ dokumentu
-- určit role účastníků
-- vyhodnotit relevantnost údajů
-- vytěžit všechny relevantní identifikační údaje pro daný typ dokumentu
-- nic podstatného nevynechat
+CÄ‚Â­lem je vÄąÄľdy:
+- pÄąâ„˘eĂ„Ĺ¤Ä‚Â­st celÄ‚Â© PDF
+- urĂ„Ĺ¤it typ dokumentu
+- urĂ„Ĺ¤it role Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ»
+- vyhodnotit relevantnost Ä‚ĹźdajÄąĹ»
+- vytĂ„â€şÄąÄľit vÄąË‡echny relevantnÄ‚Â­ identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje pro danÄ‚Ëť typ dokumentu
+- nic podstatnÄ‚Â©ho nevynechat
 
-### DOPLŇUJÍCÍ PRAVIDLO PRO EXTRAKCI ÚČASTNÍKŮ
+### DOPLÄąâ€ˇUJÄ‚Ĺ¤CÄ‚Ĺ¤ PRAVIDLO PRO EXTRAKCI Ä‚ĹˇĂ„ĹšASTNÄ‚Ĺ¤KÄąÂ®
 
-U účastníků řízení vždy samostatně vyhodnocuj:
-- kdo je hlavní osoba nebo subjekt
-- jaká je jeho role v dokumentu
-- které identifikační údaje k němu patří
-- které z těchto údajů jsou relevantní pro výstup
+U Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ» Äąâ„˘Ä‚Â­zenÄ‚Â­ vÄąÄľdy samostatnĂ„â€ş vyhodnocuj:
+- kdo je hlavnÄ‚Â­ osoba nebo subjekt
+- jakÄ‚Ë‡ je jeho role v dokumentu
+- kterÄ‚Â© identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje k nĂ„â€şmu patÄąâ„˘Ä‚Â­
+- kterÄ‚Â© z tĂ„â€şchto Ä‚ĹźdajÄąĹ» jsou relevantnÄ‚Â­ pro vÄ‚Ëťstup
 
-Neber pouze první nalezený údaj. Vždy zkontroluj, zda nejsou v dalších částech PDF uvedeny doplňující nebo přesnější identifikační údaje stejného účastníka.
+Neber pouze prvnÄ‚Â­ nalezenÄ‚Ëť Ä‚Ĺźdaj. VÄąÄľdy zkontroluj, zda nejsou v dalÄąË‡Ä‚Â­ch Ă„Ĺ¤Ä‚Ë‡stech PDF uvedeny doplÄąÂujÄ‚Â­cÄ‚Â­ nebo pÄąâ„˘esnĂ„â€şjÄąË‡Ä‚Â­ identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje stejnÄ‚Â©ho Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka.
 `;
 
 
 const PDF_IDENTITY_SPLIT_RULES = `
-### PRAVIDLO PRO ODDĚLENÍ IDENTIFIKAČNÍCH ÚDAJŮ ODESÍLATELE
+### PRAVIDLO PRO ODDĂ„ĹˇLENÄ‚Ĺ¤ IDENTIFIKAĂ„ĹšNÄ‚Ĺ¤CH Ä‚ĹˇDAJÄąÂ® ODESÄ‚Ĺ¤LATELE
 
-Pole senderName smí obsahovat pouze:
-- jméno a příjmení fyzické osoby
-- nebo název právnické osoby
+Pole senderName smÄ‚Â­ obsahovat pouze:
+- jmÄ‚Â©no a pÄąâ„˘Ä‚Â­jmenÄ‚Â­ fyzickÄ‚Â© osoby
+- nebo nÄ‚Ë‡zev prÄ‚Ë‡vnickÄ‚Â© osoby
 
-Do pole senderName nikdy nevkládej:
+Do pole senderName nikdy nevklÄ‚Ë‡dej:
 - adresu
-- rodné číslo
-- datum narození
-- IČO
-- datovou schránku
+- rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo
+- datum narozenÄ‚Â­
+- IĂ„ĹšO
+- datovou schrÄ‚Ë‡nku
 - e-mail
 - telefon
-- víceřádkový identifikační blok
+- vÄ‚Â­ceÄąâ„˘Ä‚Ë‡dkovÄ‚Ëť identifikaĂ„Ĺ¤nÄ‚Â­ blok
 
-Pole senderAddress smí obsahovat pouze adresu nebo doručovací adresu odesílatele.
+Pole senderAddress smÄ‚Â­ obsahovat pouze adresu nebo doruĂ„Ĺ¤ovacÄ‚Â­ adresu odesÄ‚Â­latele.
 
-Pokud PDF obsahuje identifikační údaje fyzické osoby, rozděl je takto:
-- jméno a příjmení -> senderName
+Pokud PDF obsahuje identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje fyzickÄ‚Â© osoby, rozdĂ„â€şl je takto:
+- jmÄ‚Â©no a pÄąâ„˘Ä‚Â­jmenÄ‚Â­ -> senderName
 - adresa -> senderAddress
-- datum narození -> senderBirthDate
-- rodné číslo -> senderBirthNumber
+- datum narozenÄ‚Â­ -> senderBirthDate
+- rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo -> senderBirthNumber
 
-Pokud PDF obsahuje identifikační údaje právnické osoby, rozděl je takto:
-- název subjektu -> senderName
-- sídlo -> senderAddress
-- IČO -> senderIco
+Pokud PDF obsahuje identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje prÄ‚Ë‡vnickÄ‚Â© osoby, rozdĂ„â€şl je takto:
+- nÄ‚Ë‡zev subjektu -> senderName
+- sÄ‚Â­dlo -> senderAddress
+- IĂ„ĹšO -> senderIco
 
-Pokud některý z těchto údajů není jistý, nehádej ho a vrať prázdný řetězec.
+Pokud nĂ„â€şkterÄ‚Ëť z tĂ„â€şchto Ä‚ĹźdajÄąĹ» nenÄ‚Â­ jistÄ‚Ëť, nehÄ‚Ë‡dej ho a vraÄąÄ„ prÄ‚Ë‡zdnÄ‚Ëť Äąâ„˘etĂ„â€şzec.
 `;
 
 function normalizeText(value) {
@@ -222,14 +222,14 @@ function sanitizeSenderName(value) {
     .filter(Boolean)
     .filter((s) => {
       const lower = s.toLowerCase();
-      if (lower.includes("r. č")) return false;
-      if (lower.includes("rodné číslo")) return false;
+      if (lower.includes("r. Ă„Ĺ¤")) return false;
+      if (lower.includes("rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo")) return false;
       if (lower.includes("nar.")) return false;
       if (lower.includes("narozen")) return false;
-      if (lower.includes("datum narození")) return false;
-      if (lower.includes("ičo")) return false;
+      if (lower.includes("datum narozenÄ‚Â­")) return false;
+      if (lower.includes("iĂ„Ĺ¤o")) return false;
       if (/\d{6}\/?\d{3,4}/.test(s)) return false;
-      if (/\d/.test(s) && /\d{3}\s?\d{2}/.test(s) && /[A-Za-zÁ-Žá-ž]/.test(s)) return false;
+      if (/\d/.test(s) && /\d{3}\s?\d{2}/.test(s) && /[A-Za-z]/.test(s)) return false;
       return true;
     })
     .join(" ")
@@ -246,17 +246,17 @@ function sanitizeSenderAddress(value) {
     .filter(Boolean)
     .filter((s) => {
       const lower = s.toLowerCase();
-      if (lower.includes("r. č")) return false;
-      if (lower.includes("rodné číslo")) return false;
+      if (lower.includes("r. Ă„Ĺ¤")) return false;
+      if (lower.includes("rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo")) return false;
       if (lower.includes("nar.")) return false;
       if (lower.includes("narozen")) return false;
-      if (lower.includes("datum narození")) return false;
-      if (lower.includes("ičo")) return false;
-      if (lower.includes("datová schránka")) return false;
+      if (lower.includes("datum narozenÄ‚Â­")) return false;
+      if (lower.includes("iĂ„Ĺ¤o")) return false;
+      if (lower.includes("datovÄ‚Ë‡ schrÄ‚Ë‡nka")) return false;
       if (lower.includes("e-mail")) return false;
       if (lower.includes("telefon")) return false;
       if (/\d{6}\/?\d{3,4}/.test(s)) return false;
-      if (/^ičo[:\s]/i.test(s)) return false;
+      if (/^iĂ„Ĺ¤o[:\s]/i.test(s)) return false;
       return true;
     })
     .join(", ")
@@ -317,7 +317,7 @@ function normalizeExekutorRecord(ex, idx) {
 
   return {
     id: `ex_${normalizeText(ex.cislo) || idx}`,
-    nazev: `Exekutorský úřad: ${fullName}`,
+    nazev: `Exekutorsk\u00fd \u00fa\u0159ad: ${fullName}`, 
     mesto,
     adresa: fullAddress || mesto,
     ds,
@@ -346,7 +346,7 @@ function normalizeUnifiedRecord(item, idx) {
   if (!targetCat) return null;
 
   const nazev = normalizeText(item.nazev_subjektu) || "Neuvedeno";
-  const mesto = normalizeText(item.nejblizsi_fyzicka_pobocka) || normalizeText(item.kraj) || normalizeText(item.adresa_pobocky) || "Ústředí";
+  const mesto = normalizeText(item.nejblizsi_fyzicka_pobocka) || normalizeText(item.kraj) || normalizeText(item.adresa_pobocky) || "Ä‚ĹˇstÄąâ„˘edÄ‚Â­";
   const adresa = normalizeText(item.adresa_pobocky) || normalizeText(item.nejblizsi_fyzicka_pobocka) || normalizeText(item.kraj) || "Neuvedeno";
   const ds = normalizeText(item.datova_schranka) || "---";
   const tel = normalizeText(item.telefon) || "---";
@@ -388,14 +388,14 @@ function normalizeContactsFromJson(parsed) {
     return out;
   }
 
-  throw new Error("Nepodporovaný formát JSON.");
+  throw new Error("NepodporovanÄ‚Ëť formÄ‚Ë‡t JSON.");
 }
 
 function loadContactsFromFiles() {
   let loadedFiles = 0;
   for (const filePath of DATA_FILES) {
     if (!fs.existsSync(filePath)) {
-      console.log(`Výchozí soubor nebyl nalezen: ${path.basename(filePath)}`);
+      console.log(`VÄ‚ËťchozÄ‚Â­ soubor nebyl nalezen: ${path.basename(filePath)}`);
       continue;
     }
 
@@ -406,13 +406,13 @@ function loadContactsFromFiles() {
       mergeContacts(imported);
       loadedFiles += 1;
       const importedCount = Object.values(imported).reduce((sum, arr) => sum + arr.length, 0);
-      console.log(`Načten soubor ${path.basename(filePath)}: ${importedCount} záznamů`);
+      console.log(`NaĂ„Ĺ¤ten soubor ${path.basename(filePath)}: ${importedCount} zÄ‚Ë‡znamÄąĹ»`);
     } catch (error) {
-      console.error(`Chyba při načítání ${path.basename(filePath)}: ${error.message}`);
+      console.error(`Chyba pÄąâ„˘i naĂ„Ĺ¤Ä‚Â­tÄ‚Ë‡nÄ‚Â­ ${path.basename(filePath)}: ${error.message}`);
     }
   }
-  console.log(`Výchozí soubory načteny: ${loadedFiles}/${DATA_FILES.length}`);
-  console.log(`Celkem kontaktů po startu: ${countAllContacts()}`);
+  console.log(`VÄ‚ËťchozÄ‚Â­ soubory naĂ„Ĺ¤teny: ${loadedFiles}/${DATA_FILES.length}`);
+  console.log(`Celkem kontaktÄąĹ» po startu: ${countAllContacts()}`);
 }
 
 async function postToGemini(body) {
@@ -424,9 +424,9 @@ async function postToGemini(body) {
   });
 
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || "Neznámá chyba AI služby.");
+  if (!response.ok) throw new Error(data?.error?.message || "NeznÄ‚Ë‡mÄ‚Ë‡ chyba AI sluÄąÄľby.");
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("AI nevrátila žádný obsah.");
+  if (!text) throw new Error("AI nevrÄ‚Ë‡tila ÄąÄľÄ‚Ë‡dnÄ‚Ëť obsah.");
   return safeJsonParse(text);
 }
 
@@ -434,69 +434,69 @@ async function postToGemini(body) {
 
 function detectDocumentType(prompt = "", aiContext = "") {
   const text = `${normalizeText(prompt)} ${normalizeText(aiContext)}`.toLowerCase();
-  if (text.includes("splátkový kalendář") || text.includes("splatkovy kalendar")) return "installment";
-  if (text.includes("zastavení exekuce") || text.includes("zastaveni exekuce")) return "stop_execution";
-  if (text.includes("odklad exekuce") || text.includes("odklad výkonu") || text.includes("odklad vykonu")) return "postponement";
-  if (text.includes("součinnost") || text.includes("soucinnost")) return "cooperation";
-  if (text.includes("vyškrtnutí ze soupisu") || text.includes("vyškrtnuti ze soupisu")) return "exclusion";
-  if (text.includes("sloučení exekucí") || text.includes("slouceni exekuci")) return "merge_executions";
-  if (text.includes("vylučovací žaloba") || text.includes("vylucovaci zaloba")) return "exclusion_lawsuit";
-  if (text.includes("přerušení oddlužení") || text.includes("preruseni oddluzeni")) return "debt_relief_pause";
-  if (text.includes("odpor proti platebnímu rozkazu") || text.includes("odpor proti platebnimu rozkazu")) return "payment_order_opposition";
+  if (text.includes("splÄ‚Ë‡tkovÄ‚Ëť kalendÄ‚Ë‡Äąâ„˘") || text.includes("splatkovy kalendar")) return "installment";
+  if (text.includes("zastavenÄ‚Â­ exekuce") || text.includes("zastaveni exekuce")) return "stop_execution";
+  if (text.includes("odklad exekuce") || text.includes("odklad vÄ‚Ëťkonu") || text.includes("odklad vykonu")) return "postponement";
+  if (text.includes("souĂ„Ĺ¤innost") || text.includes("soucinnost")) return "cooperation";
+  if (text.includes("vyÄąË‡krtnutÄ‚Â­ ze soupisu") || text.includes("vyÄąË‡krtnuti ze soupisu")) return "exclusion";
+  if (text.includes("slouĂ„Ĺ¤enÄ‚Â­ exekucÄ‚Â­") || text.includes("slouceni exekuci")) return "merge_executions";
+  if (text.includes("vyluĂ„Ĺ¤ovacÄ‚Â­ ÄąÄľaloba") || text.includes("vylucovaci zaloba")) return "exclusion_lawsuit";
+  if (text.includes("pÄąâ„˘eruÄąË‡enÄ‚Â­ oddluÄąÄľenÄ‚Â­") || text.includes("preruseni oddluzeni")) return "debt_relief_pause";
+  if (text.includes("odpor proti platebnÄ‚Â­mu rozkazu") || text.includes("odpor proti platebnimu rozkazu")) return "payment_order_opposition";
   return "generic";
 }
 
 function getDocumentProfile(type) {
   const profiles = {
     installment: {
-      label: "NÁVRH SPLÁTKOVÉHO KALENDÁŘE",
-      system: "Jde o návrh dobrovolného splátkového kalendáře adresovaný věřiteli nebo instituci. Nejde o soudní žalobu ani procesní návrh. Piš smírně, věcně a prakticky. Nenazývej text uznáním dluhu, pokud to výslovně neplyne z kontextu.",
-      user: "Uveď realistický návrh splácení, důvod žádosti a zdůrazni snahu o dobrovolné řešení závazku."
+      label: "NÄ‚ÂVRH SPLÄ‚ÂTKOVÄ‚â€°HO KALENDÄ‚ÂÄąÂE",
+      system: "Jde o nÄ‚Ë‡vrh dobrovolnÄ‚Â©ho splÄ‚Ë‡tkovÄ‚Â©ho kalendÄ‚Ë‡Äąâ„˘e adresovanÄ‚Ëť vĂ„â€şÄąâ„˘iteli nebo instituci. Nejde o soudnÄ‚Â­ ÄąÄľalobu ani procesnÄ‚Â­ nÄ‚Ë‡vrh. PiÄąË‡ smÄ‚Â­rnĂ„â€ş, vĂ„â€şcnĂ„â€ş a prakticky. NenazÄ‚Ëťvej text uznÄ‚Ë‡nÄ‚Â­m dluhu, pokud to vÄ‚ËťslovnĂ„â€ş neplyne z kontextu.",
+      user: "UveĂ„Ĺą realistickÄ‚Ëť nÄ‚Ë‡vrh splÄ‚Ë‡cenÄ‚Â­, dÄąĹ»vod ÄąÄľÄ‚Ë‡dosti a zdÄąĹ»razni snahu o dobrovolnÄ‚Â© Äąâ„˘eÄąË‡enÄ‚Â­ zÄ‚Ë‡vazku."
     },
     stop_execution: {
-      label: "NÁVRH NA ZASTAVENÍ EXEKUCE",
-      system: "Jde o procesní návrh na zastavení exekuce. Text musí mít styl formálního procesního podání. V závěru musí být jasný návrh, aby exekuce byla zastavena v uvedeném rozsahu. Pracuj přesně se skutkovými tvrzeními, důvody a důkazy uvedenými v kontextu.",
-      user: "Zachovej procesní styl a odděl skutkový stav, právní důvody, důkazy a návrh výroku."
+      label: "NÄ‚ÂVRH NA ZASTAVENÄ‚Ĺ¤ EXEKUCE",
+      system: "Jde o procesnÄ‚Â­ nÄ‚Ë‡vrh na zastavenÄ‚Â­ exekuce. Text musÄ‚Â­ mÄ‚Â­t styl formÄ‚Ë‡lnÄ‚Â­ho procesnÄ‚Â­ho podÄ‚Ë‡nÄ‚Â­. V zÄ‚Ë‡vĂ„â€şru musÄ‚Â­ bÄ‚Ëťt jasnÄ‚Ëť nÄ‚Ë‡vrh, aby exekuce byla zastavena v uvedenÄ‚Â©m rozsahu. Pracuj pÄąâ„˘esnĂ„â€ş se skutkovÄ‚Ëťmi tvrzenÄ‚Â­mi, dÄąĹ»vody a dÄąĹ»kazy uvedenÄ‚Ëťmi v kontextu.",
+      user: "Zachovej procesnÄ‚Â­ styl a oddĂ„â€şl skutkovÄ‚Ëť stav, prÄ‚Ë‡vnÄ‚Â­ dÄąĹ»vody, dÄąĹ»kazy a nÄ‚Ë‡vrh vÄ‚Ëťroku."
     },
     postponement: {
-      label: "ŽÁDOST O ODKLAD EXEKUCE",
-      system: "Jde o žádost o odklad exekuce. Nejde o zastavení exekuce ani o žalobu. Zdůrazni dočasnost překážek, přiměřenost odkladu a očekávané obnovení plnění nebo jiné řešení.",
-      user: "Popiš konkrétní důvody odkladu, navrženou dobu a očekávaný další vývoj."
+      label: "ÄąËťÄ‚ÂDOST O ODKLAD EXEKUCE",
+      system: "Jde o ÄąÄľÄ‚Ë‡dost o odklad exekuce. Nejde o zastavenÄ‚Â­ exekuce ani o ÄąÄľalobu. ZdÄąĹ»razni doĂ„Ĺ¤asnost pÄąâ„˘ekÄ‚Ë‡ÄąÄľek, pÄąâ„˘imĂ„â€şÄąâ„˘enost odkladu a oĂ„Ĺ¤ekÄ‚Ë‡vanÄ‚Â© obnovenÄ‚Â­ plnĂ„â€şnÄ‚Â­ nebo jinÄ‚Â© Äąâ„˘eÄąË‡enÄ‚Â­.",
+      user: "PopiÄąË‡ konkrÄ‚Â©tnÄ‚Â­ dÄąĹ»vody odkladu, navrÄąÄľenou dobu a oĂ„Ĺ¤ekÄ‚Ë‡vanÄ‚Ëť dalÄąË‡Ä‚Â­ vÄ‚Ëťvoj."
     },
     cooperation: {
-      label: "ŽÁDOST O SOUČINNOST",
-      system: "Jde o žádost o součinnost nebo poskytnutí informací či listin. Nejde o žalobu ani o návrh na soudní rozhodnutí. Text má být stručný, věcný a přesně popsat, jakou součinnost má adresát poskytnout.",
-      user: "Uveď přesně, co se žádá, proč je to potřebné a v jaké přiměřené lhůtě má být součinnost poskytnuta."
+      label: "ÄąËťÄ‚ÂDOST O SOUĂ„ĹšINNOST",
+      system: "Jde o ÄąÄľÄ‚Ë‡dost o souĂ„Ĺ¤innost nebo poskytnutÄ‚Â­ informacÄ‚Â­ Ă„Ĺ¤i listin. Nejde o ÄąÄľalobu ani o nÄ‚Ë‡vrh na soudnÄ‚Â­ rozhodnutÄ‚Â­. Text mÄ‚Ë‡ bÄ‚Ëťt struĂ„Ĺ¤nÄ‚Ëť, vĂ„â€şcnÄ‚Ëť a pÄąâ„˘esnĂ„â€ş popsat, jakou souĂ„Ĺ¤innost mÄ‚Ë‡ adresÄ‚Ë‡t poskytnout.",
+      user: "UveĂ„Ĺą pÄąâ„˘esnĂ„â€ş, co se ÄąÄľÄ‚Ë‡dÄ‚Ë‡, proĂ„Ĺ¤ je to potÄąâ„˘ebnÄ‚Â© a v jakÄ‚Â© pÄąâ„˘imĂ„â€şÄąâ„˘enÄ‚Â© lhÄąĹ»tĂ„â€ş mÄ‚Ë‡ bÄ‚Ëťt souĂ„Ĺ¤innost poskytnuta."
     },
     exclusion: {
-      label: "NÁVRH NA VYŠKRTNUTÍ VĚCI ZE SOUPISU EXEKUCE",
-      system: "Jde o návrh na vyškrtnutí věci ze soupisu exekuce. Důraz dej na tvrzení o vlastnictví třetí osoby nebo jiném právu vylučujícím soupis. Uveď popis věci, důvody, důkazy a jasný návrh na vyškrtnutí.",
-      user: "Zdůrazni vlastnické právo, identifikaci věci a důkazy, které vlastnictví podporují."
+      label: "NÄ‚ÂVRH NA VYÄąÂ KRTNUTÄ‚Ĺ¤ VĂ„ĹˇCI ZE SOUPISU EXEKUCE",
+      system: "Jde o nÄ‚Ë‡vrh na vyÄąË‡krtnutÄ‚Â­ vĂ„â€şci ze soupisu exekuce. DÄąĹ»raz dej na tvrzenÄ‚Â­ o vlastnictvÄ‚Â­ tÄąâ„˘etÄ‚Â­ osoby nebo jinÄ‚Â©m prÄ‚Ë‡vu vyluĂ„Ĺ¤ujÄ‚Â­cÄ‚Â­m soupis. UveĂ„Ĺą popis vĂ„â€şci, dÄąĹ»vody, dÄąĹ»kazy a jasnÄ‚Ëť nÄ‚Ë‡vrh na vyÄąË‡krtnutÄ‚Â­.",
+      user: "ZdÄąĹ»razni vlastnickÄ‚Â© prÄ‚Ë‡vo, identifikaci vĂ„â€şci a dÄąĹ»kazy, kterÄ‚Â© vlastnictvÄ‚Â­ podporujÄ‚Â­."
     },
     merge_executions: {
-      label: "NÁVRH NA SLOUČENÍ EXEKUCÍ",
-      system: "Jde o návrh na spojení nebo sloučení exekučních řízení. Text má být procesní, přehledný a musí vysvětlit, proč je spojení účelné a hospodárné. V závěru formuluj jasný návrh na spojení řízení.",
-      user: "Zvýrazni společného oprávněného, totožnost účastníků, přehled řízení a důvody hospodárnosti."
+      label: "NÄ‚ÂVRH NA SLOUĂ„ĹšENÄ‚Ĺ¤ EXEKUCÄ‚Ĺ¤",
+      system: "Jde o nÄ‚Ë‡vrh na spojenÄ‚Â­ nebo slouĂ„Ĺ¤enÄ‚Â­ exekuĂ„Ĺ¤nÄ‚Â­ch Äąâ„˘Ä‚Â­zenÄ‚Â­. Text mÄ‚Ë‡ bÄ‚Ëťt procesnÄ‚Â­, pÄąâ„˘ehlednÄ‚Ëť a musÄ‚Â­ vysvĂ„â€ştlit, proĂ„Ĺ¤ je spojenÄ‚Â­ Ä‚ĹźĂ„Ĺ¤elnÄ‚Â© a hospodÄ‚Ë‡rnÄ‚Â©. V zÄ‚Ë‡vĂ„â€şru formuluj jasnÄ‚Ëť nÄ‚Ë‡vrh na spojenÄ‚Â­ Äąâ„˘Ä‚Â­zenÄ‚Â­.",
+      user: "ZvÄ‚Ëťrazni spoleĂ„Ĺ¤nÄ‚Â©ho oprÄ‚Ë‡vnĂ„â€şnÄ‚Â©ho, totoÄąÄľnost Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ», pÄąâ„˘ehled Äąâ„˘Ä‚Â­zenÄ‚Â­ a dÄąĹ»vody hospodÄ‚Ë‡rnosti."
     },
     exclusion_lawsuit: {
-      label: "VYLUČOVACÍ ŽALOBA",
-      system: "Jde o vylučovací žalobu podávanou k soudu. Text musí mít procesní soudní styl a zřetelně oddělené účastníky, skutkový stav, důkazy a žalobní návrh. Nejde o pouhou žádost ani dopis exekutorovi.",
-      user: "V závěru uveď žalobní petit směřující k vyloučení věci z exekuce a případně i návrh na náhradu nákladů."
+      label: "VYLUĂ„ĹšOVACÄ‚Ĺ¤ ÄąËťALOBA",
+      system: "Jde o vyluĂ„Ĺ¤ovacÄ‚Â­ ÄąÄľalobu podÄ‚Ë‡vanou k soudu. Text musÄ‚Â­ mÄ‚Â­t procesnÄ‚Â­ soudnÄ‚Â­ styl a zÄąâ„˘etelnĂ„â€ş oddĂ„â€şlenÄ‚Â© Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ky, skutkovÄ‚Ëť stav, dÄąĹ»kazy a ÄąÄľalobnÄ‚Â­ nÄ‚Ë‡vrh. Nejde o pouhou ÄąÄľÄ‚Ë‡dost ani dopis exekutorovi.",
+      user: "V zÄ‚Ë‡vĂ„â€şru uveĂ„Ĺą ÄąÄľalobnÄ‚Â­ petit smĂ„â€şÄąâ„˘ujÄ‚Â­cÄ‚Â­ k vylouĂ„Ĺ¤enÄ‚Â­ vĂ„â€şci z exekuce a pÄąâ„˘Ä‚Â­padnĂ„â€ş i nÄ‚Ë‡vrh na nÄ‚Ë‡hradu nÄ‚Ë‡kladÄąĹ»."
     },
     debt_relief_pause: {
-      label: "ŽÁDOST O PŘERUŠENÍ ODDLUŽENÍ",
-      system: "Jde o žádost v insolvenční věci o přerušení oddlužení. Nejde o exekuční podání. Text má zdůraznit dočasné překážky plnění, jejich závažnost a očekávané obnovení řádného plnění.",
-      user: "Uveď důvody přerušení, navrženou dobu a informaci, jak a kdy se má obnovit plnění povinností."
+      label: "ÄąËťÄ‚ÂDOST O PÄąÂERUÄąÂ ENÄ‚Ĺ¤ ODDLUÄąËťENÄ‚Ĺ¤",
+      system: "Jde o ÄąÄľÄ‚Ë‡dost v insolvenĂ„Ĺ¤nÄ‚Â­ vĂ„â€şci o pÄąâ„˘eruÄąË‡enÄ‚Â­ oddluÄąÄľenÄ‚Â­. Nejde o exekuĂ„Ĺ¤nÄ‚Â­ podÄ‚Ë‡nÄ‚Â­. Text mÄ‚Ë‡ zdÄąĹ»raznit doĂ„Ĺ¤asnÄ‚Â© pÄąâ„˘ekÄ‚Ë‡ÄąÄľky plnĂ„â€şnÄ‚Â­, jejich zÄ‚Ë‡vaÄąÄľnost a oĂ„Ĺ¤ekÄ‚Ë‡vanÄ‚Â© obnovenÄ‚Â­ Äąâ„˘Ä‚Ë‡dnÄ‚Â©ho plnĂ„â€şnÄ‚Â­.",
+      user: "UveĂ„Ĺą dÄąĹ»vody pÄąâ„˘eruÄąË‡enÄ‚Â­, navrÄąÄľenou dobu a informaci, jak a kdy se mÄ‚Ë‡ obnovit plnĂ„â€şnÄ‚Â­ povinnostÄ‚Â­."
     },
     payment_order_opposition: {
-      label: "ODPOR PROTI PLATEBNÍMU ROZKAZU",
-      system: "Jde o procesní odpor proti platebnímu rozkazu. Text má mít procesní charakter a musí jasně uvést, že je podáván v zákonné lhůtě. Nejde o odvolání ani obecnou námitku.",
-      user: "Zdůrazni, že jde o odpor, uveď identifikaci rozhodnutí a stručné, ale konkrétní odůvodnění, pokud je v kontextu k dispozici."
+      label: "ODPOR PROTI PLATEBNÄ‚Ĺ¤MU ROZKAZU",
+      system: "Jde o procesnÄ‚Â­ odpor proti platebnÄ‚Â­mu rozkazu. Text mÄ‚Ë‡ mÄ‚Â­t procesnÄ‚Â­ charakter a musÄ‚Â­ jasnĂ„â€ş uvÄ‚Â©st, ÄąÄľe je podÄ‚Ë‡vÄ‚Ë‡n v zÄ‚Ë‡konnÄ‚Â© lhÄąĹ»tĂ„â€ş. Nejde o odvolÄ‚Ë‡nÄ‚Â­ ani obecnou nÄ‚Ë‡mitku.",
+      user: "ZdÄąĹ»razni, ÄąÄľe jde o odpor, uveĂ„Ĺą identifikaci rozhodnutÄ‚Â­ a struĂ„Ĺ¤nÄ‚Â©, ale konkrÄ‚Â©tnÄ‚Â­ odÄąĹ»vodnĂ„â€şnÄ‚Â­, pokud je v kontextu k dispozici."
     },
     generic: {
-      label: "ÚŘEDNÍ LISTINA",
-      system: "Jde o obecnou formální úřední listinu. Piš věcně, přehledně a bez vymýšlení skutečností.",
-      user: "Použij poskytnutý kontext a vytvoř logicky strukturované podání nebo dopis podle jeho obsahu."
+      label: "Ä‚ĹˇÄąÂEDNÄ‚Ĺ¤ LISTINA",
+      system: "Jde o obecnou formÄ‚Ë‡lnÄ‚Â­ Ä‚ĹźÄąâ„˘ednÄ‚Â­ listinu. PiÄąË‡ vĂ„â€şcnĂ„â€ş, pÄąâ„˘ehlednĂ„â€ş a bez vymÄ‚ËťÄąË‡lenÄ‚Â­ skuteĂ„Ĺ¤nostÄ‚Â­.",
+      user: "PouÄąÄľij poskytnutÄ‚Ëť kontext a vytvoÄąâ„˘ logicky strukturovanÄ‚Â© podÄ‚Ë‡nÄ‚Â­ nebo dopis podle jeho obsahu."
     }
   };
   return profiles[type] || profiles.generic;
@@ -507,29 +507,29 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
   const profile = getDocumentProfile(documentType);
 
   const systemPrompt = [
-    "Jsi přesný právní asistent.",
+    "Jsi pÄąâ„˘esnÄ‚Ëť prÄ‚Ë‡vnÄ‚Â­ asistent.",
     `Typ dokumentu: ${profile.label}.`,
     profile.system,
     PDF_RELEVANCE_RULES,
     PDF_IDENTITY_SPLIT_RULES,
-    "Vytvoř formální úřední listinu v češtině odpovídající typu dokumentu.",
-    "Použij údaje o odesílateli z přiloženého PDF, pokud jsou čitelné.",
-    `Příjemce: ${recipient.nazev}, adresa nebo město: ${recipient.adresa || recipient.mesto}, datová schránka: ${recipient.ds}.`,
-    "Nevymýšlej skutková tvrzení, data ani právní důvody, které nejsou v promptu, kontextu nebo PDF.",
-    "Pokud některý údaj chybí, napiš text neutrálně a bez doplňování smyšlených detailů.",
-    "Tělo listiny musí být věcné, přehledné a přizpůsobené konkrétnímu typu podání.",
-    "Vrať pouze validní JSON bez markdownu.",
-    'Použij schéma: {"senderName":"","senderAddress":"","senderBirthDate":"","senderBirthNumber":"","senderIco":"","refData":"","title":"","body":""}'
+    "VytvoÄąâ„˘ formÄ‚Ë‡lnÄ‚Â­ Ä‚ĹźÄąâ„˘ednÄ‚Â­ listinu v Ă„Ĺ¤eÄąË‡tinĂ„â€ş odpovÄ‚Â­dajÄ‚Â­cÄ‚Â­ typu dokumentu.",
+    "PouÄąÄľij Ä‚Ĺźdaje o odesÄ‚Â­lateli z pÄąâ„˘iloÄąÄľenÄ‚Â©ho PDF, pokud jsou Ă„Ĺ¤itelnÄ‚Â©.",
+    `PÄąâ„˘Ä‚Â­jemce: ${recipient.nazev}, adresa nebo mĂ„â€şsto: ${recipient.adresa || recipient.mesto}, datovÄ‚Ë‡ schrÄ‚Ë‡nka: ${recipient.ds}.`,
+    "NevymÄ‚ËťÄąË‡lej skutkovÄ‚Ë‡ tvrzenÄ‚Â­, data ani prÄ‚Ë‡vnÄ‚Â­ dÄąĹ»vody, kterÄ‚Â© nejsou v promptu, kontextu nebo PDF.",
+    "Pokud nĂ„â€şkterÄ‚Ëť Ä‚Ĺźdaj chybÄ‚Â­, napiÄąË‡ text neutrÄ‚Ë‡lnĂ„â€ş a bez doplÄąÂovÄ‚Ë‡nÄ‚Â­ smyÄąË‡lenÄ‚Ëťch detailÄąĹ».",
+    "TĂ„â€şlo listiny musÄ‚Â­ bÄ‚Ëťt vĂ„â€şcnÄ‚Â©, pÄąâ„˘ehlednÄ‚Â© a pÄąâ„˘izpÄąĹ»sobenÄ‚Â© konkrÄ‚Â©tnÄ‚Â­mu typu podÄ‚Ë‡nÄ‚Â­.",
+    "VraÄąÄ„ pouze validnÄ‚Â­ JSON bez markdownu.",
+    'PouÄąÄľij schÄ‚Â©ma: {"senderName":"","senderAddress":"","senderBirthDate":"","senderBirthNumber":"","senderIco":"","refData":"","title":"","body":""}'
   ].join(" ");
 
   const userQuery = [
-    `Účel listiny: ${prompt}`,
-    `Rozpoznaný typ listiny: ${profile.label}`,
-    `Doplňující pokyn pro tento typ: ${profile.user}`,
-    `Doplňující kontext: ${aiContext || "Bez dalšího kontextu."}`,
-    "Tón: formální, věcný, úřední.",
-    "Název listiny dej VELKÝMI PÍSMENY.",
-    "Pokud jde o procesní podání, zakonči text jasným návrhem nebo petitem odpovídajícím danému typu listiny."
+    `Ä‚ĹˇĂ„Ĺ¤el listiny: ${prompt}`,
+    `RozpoznanÄ‚Ëť typ listiny: ${profile.label}`,
+    `DoplÄąÂujÄ‚Â­cÄ‚Â­ pokyn pro tento typ: ${profile.user}`,
+    `DoplÄąÂujÄ‚Â­cÄ‚Â­ kontext: ${aiContext || "Bez dalÄąË‡Ä‚Â­ho kontextu."}`,
+    "TÄ‚Ĺ‚n: formÄ‚Ë‡lnÄ‚Â­, vĂ„â€şcnÄ‚Ëť, Ä‚ĹźÄąâ„˘ednÄ‚Â­.",
+    "NÄ‚Ë‡zev listiny dej VELKÄ‚ĹĄMI PÄ‚Ĺ¤SMENY.",
+    "Pokud jde o procesnÄ‚Â­ podÄ‚Ë‡nÄ‚Â­, zakonĂ„Ĺ¤i text jasnÄ‚Ëťm nÄ‚Ë‡vrhem nebo petitem odpovÄ‚Â­dajÄ‚Â­cÄ‚Â­m danÄ‚Â©mu typu listiny."
   ].join("\n");
 
   const parts = [{ text: userQuery }];
@@ -569,15 +569,15 @@ async function extractDebtAmountFromPdf(pdfBase64) {
     systemInstruction: {
       parts: [{
         text: [
-          "Jsi přesný extraktor údajů z právních dokumentů.",
+          "Jsi pÄąâ„˘esnÄ‚Ëť extraktor Ä‚ĹźdajÄąĹ» z prÄ‚Ë‡vnÄ‚Â­ch dokumentÄąĹ».",
           PDF_RELEVANCE_RULES,
-          "Najdi v PDF dlužnou částku nebo vymáhanou částku.",
-          "Vrať pouze validní JSON bez markdownu.",
-          'Použij schéma: {"debtAmount":""}'
+          "Najdi v PDF dluÄąÄľnou Ă„Ĺ¤Ä‚Ë‡stku nebo vymÄ‚Ë‡hanou Ă„Ĺ¤Ä‚Ë‡stku.",
+          "VraÄąÄ„ pouze validnÄ‚Â­ JSON bez markdownu.",
+          'PouÄąÄľij schÄ‚Â©ma: {"debtAmount":""}'
         ].join(" ")
       }]
     },
-    contents: [{ parts: [{ text: "Vyhledej v PDF dlužnou částku. Vrať ji jako číslo bez měny, ideálně ve formátu 12500.50. Pokud ji nenajdeš, vrať prázdný řetězec." }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
+    contents: [{ parts: [{ text: "Vyhledej v PDF dluÄąÄľnou Ă„Ĺ¤Ä‚Ë‡stku. VraÄąÄ„ ji jako Ă„Ĺ¤Ä‚Â­slo bez mĂ„â€şny, ideÄ‚Ë‡lnĂ„â€ş ve formÄ‚Ë‡tu 12500.50. Pokud ji nenajdeÄąË‡, vraÄąÄ„ prÄ‚Ë‡zdnÄ‚Ëť Äąâ„˘etĂ„â€şzec." }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
     generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
   });
   return normalizeText(parsed.debtAmount);
@@ -588,16 +588,16 @@ async function extractStopExecutionFromPdf(pdfBase64) {
     systemInstruction: {
       parts: [{
         text: [
-          "Jsi extraktor údajů z exekučních dokumentů.",
+          "Jsi extraktor Ä‚ĹźdajÄąĹ» z exekuĂ„Ĺ¤nÄ‚Â­ch dokumentÄąĹ».",
           PDF_RELEVANCE_RULES,
-          "Najdi klíčové údaje pro návrh na zastavení exekuce.",
-          "Vrať pouze validní JSON bez markdownu.",
-          "Použij schéma:",
+          "Najdi klÄ‚Â­Ă„Ĺ¤ovÄ‚Â© Ä‚Ĺźdaje pro nÄ‚Ë‡vrh na zastavenÄ‚Â­ exekuce.",
+          "VraÄąÄ„ pouze validnÄ‚Â­ JSON bez markdownu.",
+          "PouÄąÄľij schÄ‚Â©ma:",
           '{"exekutor":"","exekutorskyUrad":"","adresaUradu":"","spisovaZnacka":"","opravneny":"","povinny":"","exekucniTitul":"","datumVyzvy":""}'
         ].join(" ")
       }]
     },
-    contents: [{ parts: [{ text: "Vytěž uvedené údaje z PDF. Pokud údaj nenajdeš, vrať prázdný řetězec." }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
+    contents: [{ parts: [{ text: "VytĂ„â€şÄąÄľ uvedenÄ‚Â© Ä‚Ĺźdaje z PDF. Pokud Ä‚Ĺźdaj nenajdeÄąË‡, vraÄąÄ„ prÄ‚Ë‡zdnÄ‚Ëť Äąâ„˘etĂ„â€şzec." }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
     generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
   });
 }
@@ -619,9 +619,9 @@ app.get("/api/contacts", (req, res) => {
 
 app.post("/api/import-json", upload.single("jsonDb"), (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "Chybí JSON soubor." });
+    if (!req.file) return res.status(400).json({ ok: false, error: "ChybÄ‚Â­ JSON soubor." });
     if (!["application/json", "text/plain", ""].includes(req.file.mimetype)) {
-      return res.status(400).json({ ok: false, error: "Soubor musí být JSON." });
+      return res.status(400).json({ ok: false, error: "Soubor musÄ‚Â­ bÄ‚Ëťt JSON." });
     }
     const parsed = JSON.parse(req.file.buffer.toString("utf-8"));
     const imported = normalizeContactsFromJson(parsed);
@@ -636,21 +636,21 @@ app.post("/api/import-json", upload.single("jsonDb"), (req, res) => {
 
 app.post("/api/extract-debt", upload.single("pdf"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "Chybí PDF soubor." });
+    if (!req.file) return res.status(400).json({ ok: false, error: "ChybÄ‚Â­ PDF soubor." });
     const debtAmount = await extractDebtAmountFromPdf(req.file.buffer.toString("base64"));
     res.json({ ok: true, debtAmount });
   } catch (error) {
-    res.status(500).json({ ok: false, error: error.message || "Nepodařilo se načíst dlužnou částku z PDF." });
+    res.status(500).json({ ok: false, error: error.message || "NepodaÄąâ„˘ilo se naĂ„Ĺ¤Ä‚Â­st dluÄąÄľnou Ă„Ĺ¤Ä‚Ë‡stku z PDF." });
   }
 });
 
 app.post("/api/extract-stop-execution", upload.single("pdf"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "Chybí PDF soubor." });
+    if (!req.file) return res.status(400).json({ ok: false, error: "ChybÄ‚Â­ PDF soubor." });
     const data = await extractStopExecutionFromPdf(req.file.buffer.toString("base64"));
     res.json({ ok: true, data });
   } catch (error) {
-    res.status(500).json({ ok: false, error: error.message || "Extrakce údajů z PDF selhala." });
+    res.status(500).json({ ok: false, error: error.message || "Extrakce Ä‚ĹźdajÄąĹ» z PDF selhala." });
   }
 });
 
@@ -661,11 +661,11 @@ app.post("/api/generate", upload.single("pdf"), async (req, res) => {
     const recipientRaw = req.body.recipient;
 
     if (!prompt || prompt.length < 3) {
-      return res.status(400).json({ ok: false, error: "Prompt je příliš krátký." });
+      return res.status(400).json({ ok: false, error: "Prompt je pÄąâ„˘Ä‚Â­liÄąË‡ krÄ‚Ë‡tkÄ‚Ëť." });
     }
 
     let recipient = {
-      nazev: "Příjemce neuveden",
+      nazev: "PÄąâ„˘Ä‚Â­jemce neuveden",
       adresa: "",
       mesto: "",
       ds: ""
@@ -675,13 +675,13 @@ app.post("/api/generate", upload.single("pdf"), async (req, res) => {
       try {
         const parsedRecipient = JSON.parse(recipientRaw);
         recipient = {
-          nazev: parsedRecipient?.nazev || "Příjemce neuveden",
+          nazev: parsedRecipient?.nazev || "PÄąâ„˘Ä‚Â­jemce neuveden",
           adresa: parsedRecipient?.adresa || "",
           mesto: parsedRecipient?.mesto || "",
           ds: parsedRecipient?.ds || ""
         };
       } catch {
-        return res.status(400).json({ ok: false, error: "Příjemce není validní JSON." });
+        return res.status(400).json({ ok: false, error: "PÄąâ„˘Ä‚Â­jemce nenÄ‚Â­ validnÄ‚Â­ JSON." });
       }
     }
 
@@ -696,7 +696,7 @@ app.post("/api/generate", upload.single("pdf"), async (req, res) => {
   } catch (error) {
     res.status(500).json({
       ok: false,
-      error: error.message || "Generování selhalo."
+      error: error.message || "GenerovÄ‚Ë‡nÄ‚Â­ selhalo."
     });
   }
 });
@@ -718,25 +718,53 @@ app.post("/api/export-docx", async (req, res) => {
       body
     } = req.body || {};
 
+    const letterheadTitle = "Osobla\u017esk\u00fd cech, z. \u00fa. - Dluhov\u00e9 a pracovn\u00ed poradenstv\u00ed na Osobla\u017esku";
+    const letterheadSubtitle = "Hlinka 25, 793 99 Hlinka | I\u010cO 01937324 | www.osoblazskycech.cz | info@osoblazskycech.cz";
+
     const doc = new Document({
       sections: [
         {
-          properties: {},
+          properties: {
+            page: {
+              margin: {
+                top: 1700,
+                right: 1440,
+                bottom: 1440,
+                left: 1440
+              }
+            }
+          },
+          headers: {
+            default: new Header({
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 80 },
+                  children: [new TextRun({ text: letterheadTitle, bold: true, size: 20 })]
+                }),
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 240 },
+                  children: [new TextRun({ text: letterheadSubtitle, size: 18 })]
+                })
+              ]
+            })
+          },
           children: [
             new Paragraph({
               children: [
-                new TextRun({ text: "ODESÍLATEL:", bold: true }),
+                new TextRun({ text: "ODES\u00cdLATEL:", bold: true }),
                 new TextRun({ text: ` ${senderName || "---"}` })
               ]
             }),
             new Paragraph(senderAddress || "---"),
-            ...(senderBirthDate ? [new Paragraph({ children: [new TextRun({ text: "DATUM NAROZENÍ: ", bold: true }), new TextRun(senderBirthDate)] })] : []),
-            ...(senderBirthNumber ? [new Paragraph({ children: [new TextRun({ text: "RODNÉ ČÍSLO: ", bold: true }), new TextRun(senderBirthNumber)] })] : []),
-            ...(senderIco ? [new Paragraph({ children: [new TextRun({ text: "IČO: ", bold: true }), new TextRun(senderIco)] })] : []),
+            ...(senderBirthDate ? [new Paragraph({ children: [new TextRun({ text: "DATUM NAROZEN\u00cd: ", bold: true }), new TextRun(senderBirthDate)] })] : []),
+            ...(senderBirthNumber ? [new Paragraph({ children: [new TextRun({ text: "RODN\u00c9 \u010c\u00cdSLO: ", bold: true }), new TextRun(senderBirthNumber)] })] : []),
+            ...(senderIco ? [new Paragraph({ children: [new TextRun({ text: "I\u010cO: ", bold: true }), new TextRun(senderIco)] })] : []),
             new Paragraph(""),
             new Paragraph({
               children: [
-                new TextRun({ text: "PŘÍJEMCE:", bold: true }),
+                new TextRun({ text: "P\u0158\u00cdJEMCE:", bold: true }),
                 new TextRun({ text: ` ${recipientName || "---"}` })
               ]
             }),
@@ -744,13 +772,13 @@ app.post("/api/export-docx", async (req, res) => {
             new Paragraph(""),
             new Paragraph({
               children: [
-                new TextRun({ text: "NAŠE Č.J.: ", bold: true }),
+                new TextRun({ text: "NA\u0160E \u010c.J.: ", bold: true }),
                 new TextRun(refData || "---")
               ]
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: "DATUM A MÍSTO: ", bold: true }),
+                new TextRun({ text: "DATUM A M\u00cdSTO: ", bold: true }),
                 new TextRun(dateText || "---")
               ]
             }),
@@ -759,7 +787,7 @@ app.post("/api/export-docx", async (req, res) => {
               alignment: AlignmentType.CENTER,
               children: [
                 new TextRun({
-                  text: title || "ÚŘEDNÍ LISTINA",
+                  text: title || "\u00da\u0158EDN\u00cd LISTINA",
                   bold: true,
                   allCaps: true,
                   size: 28
@@ -773,7 +801,7 @@ app.post("/api/export-docx", async (req, res) => {
             new Paragraph(""),
             new Paragraph(""),
             new Paragraph("______________________________"),
-            new Paragraph("Vlastnoruční podpis")
+            new Paragraph("Vlastnoru\u010dn\u00ed podpis")
           ]
         }
       ]
@@ -802,6 +830,6 @@ app.post("/api/export-docx", async (req, res) => {
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
 loadContactsFromFiles();
-app.listen(PORT, () => console.log(`Server běží na http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Server bĂ„â€şÄąÄľÄ‚Â­ na http://localhost:${PORT}`));
 
 // debt_statement profile already injected in previous step

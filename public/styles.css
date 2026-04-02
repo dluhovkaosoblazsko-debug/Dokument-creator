@@ -322,3 +322,31 @@ body {
   font-size: 12px;
 }
 
+.letterhead {
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #dbe3ef;
+  text-align: center;
+  font-family: Arial, sans-serif;
+}
+
+.letterhead-title {
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.letterhead-subtitle {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #4b5563;
+}
+
+@media print {
+  .letterhead {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
