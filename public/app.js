@@ -14,6 +14,9 @@ function getTotalContacts() { return Object.values(state.contactData).reduce((su
 function updateTotalCount() { const el = byId('totalCount'); if (el) el.innerText = `${getTotalContacts()} kontaktů`; }
 
 
+function updateRecipientUi(){ const btn=byId('useAsRecipientBtn'); const status=byId('recipientStatus'); const sel=state.selectedContact; const rec=state.documentRecipient; const same=sel&&rec&&sel.id===rec.id; if(btn){ btn.textContent=same?'Adresát nastaven':'Použít jako adresáta'; } if(status){ if(same) status.textContent='Tento kontakt bude použit jako adresát listiny.'; else if(rec) status.textContent=`Aktuální adresát: ${rec.nazev}`; else status.textContent='Adresát zatím není vybrán.'; }}
+function setDocumentRecipientFromSelected(){ if(!state.selectedContact){ showError('Nejdřív otevřete kontakt.'); return;} state.documentRecipient=state.selectedContact; updateRecipientUi(); renderResults(); showToast('Kontakt byl nastaven jako adresát listiny.'); }
+
 function updateStatus() {
   const promptInput = byId('aiPromptInput');
   const hasFile = !!getSelectedFile();
@@ -43,34 +46,7 @@ function updateStatus() {
   text.innerText = 'Čekám na zadání';
 }
 
-function updateRecipientUi() {
-  const btn = byId('useAsRecipientBtn');
-  const status = byId('recipientStatus');
-  const selected = state.selectedContact;
-  const recipient = state.documentRecipient;
-  const same = !!selected && !!recipient && selected.id === recipient.id;
-  if (btn) {
-    btn.innerText = same ? 'Adresát nastaven' : 'Použít jako adresáta';
-    btn.className = `btn ${same ? 'btn-primary' : 'btn-secondary'} btn-small`;
-  }
-  if (status) {
-    if (same) status.innerText = 'Tento kontakt bude použit jako adresát listiny.';
-    else if (recipient) status.innerText = `Aktuální adresát: ${recipient.nazev}`;
-    else status.innerText = 'Adresát zatím není vybrán.';
-  }
-}
 
-function setDocumentRecipientFromSelected() {
-  if (!state.selectedContact) {
-    showError('Nejdřív otevřete kontakt.');
-    return;
-  }
-  state.documentRecipient = state.selectedContact;
-  updateRecipientUi();
-  renderResults();
-  showToast('Kontakt byl nastaven jako adresát listiny.');
-  updateStatus();
-}
 function setLoading(isLoading) {
   const btn = byId('aiGenerateBtn');
   const btnText = byId('btnText');
@@ -112,10 +88,9 @@ function openContactDetail(item, category) {
   tag.innerText = category;
   tag.className = `category-tag cat-${category}`;
   detail.classList.remove('hidden');
-  updateRecipientUi();
 }
 
-function closeContactDetail() { state.selectedContact = null; byId('contactDetail')?.classList.add('hidden'); updateRecipientUi(); renderResults(); updateStatus(); }
+function closeContactDetail() { state.selectedContact = null; byId('contactDetail')?.classList.add('hidden'); renderResults(); updateStatus(); }
 
 function getVisibleItems() {
   const q = (byId('searchInput')?.value || '').trim().toLowerCase();
@@ -133,16 +108,18 @@ function getVisibleItems() {
 function renderResults() {
   const res = byId('results'); if (!res) return;
   const items = getVisibleItems(); res.innerHTML = '';
-  if (!items.length) { res.innerHTML = '<div class="empty-state">Nenalezeny žádné záznamy v této kategorii.</div>'; return; }
   items.forEach((item) => {
-    const isRecipient = state.documentRecipient?.id === item.id;
-    const div = document.createElement('button');
-    div.type = 'button';
-    div.className = `contact-row ${state.selectedContact?.id === item.id ? 'selected' : ''}`;
-    div.innerHTML = `<div class="contact-text"><span class="contact-title">${escapeHtml(item.nazev)}</span><span class="contact-subtitle">${escapeHtml(item.mesto)}</span></div><span style="display:flex;gap:6px;align-items:center;"><span class="category-tag cat-${escapeHtml(item.category)}">${escapeHtml(item.category.substring(0,4))}</span>${isRecipient ? '<span class="category-tag" style="background:#22c55e;color:#052e16;">ADR</span>' : ''}</span>`;
-    div.addEventListener('click', () => { state.selectedContact = item; openContactDetail(item, item.category); renderResults(); updateStatus(); });
-    res.appendChild(div);
-  });
+  const subtitle = item.adresa && item.mesto && !item.adresa.includes(item.mesto)
+  ? `${item.adresa}, ${item.mesto}`
+  : (item.adresa || item.mesto || '');
+
+  const div = document.createElement('button');
+  div.type = 'button';
+  div.className = `contact-row ${state.selectedContact?.id === item.id ? 'selected' : ''}`;
+  div.innerHTML = `<div class="contact-text"><span class="contact-title">${escapeHtml(item.nazev)}</span><span class="contact-subtitle">${escapeHtml(subtitle)}</span></div><span class="category-tag cat-${escapeHtml(item.category)}">${escapeHtml(item.category.substring(0,4))}</span>`;
+  div.addEventListener('click', () => { state.selectedContact = item; openContactDetail(item, item.category); renderResults(); updateStatus(); });
+  res.appendChild(div);
+});
 }
 
 async function loadContactsFromServer() {
@@ -182,6 +159,7 @@ function isCooperationPrompt(value) {
   const v = String(value || '').toLowerCase();
   return v.includes('součinnost') || v.includes('soucinnost');
 }
+function isDebtStatementPrompt(value) { const v = String(value || '').toLowerCase(); return v.includes('vyčíslení dluhu') || v.includes('vycisleni dluhu'); }
 
 function clearInstallmentFields() { ['debtAmountInput','monthsInput','monthlyPaymentInput'].forEach((id)=>{const el=byId(id); if(el) el.value='';}); const hint=byId('installmentHint'); if(hint){hint.innerText=''; hint.classList.add('hidden');}}
 function toggleInstallmentFields() { const wrapper=byId('installmentFields'); const prompt=byId('aiPromptInput')?.value || ''; if(!wrapper) return; const show=isInstallmentPrompt(prompt); wrapper.classList.toggle('hidden', !show); if(!show) clearInstallmentFields(); }
@@ -200,6 +178,7 @@ function setPrompt(value) {
   toggleStopExecutionFields();
   togglePostponementFields();
   toggleCooperationFields();
+  toggleDebtStatementFields();
   toggleExclusionFields();
   ensureExclusionItemRows();
   toggleMergeFields();
@@ -241,6 +220,9 @@ function buildCooperationContext() {
   return lines.filter(Boolean).join('\\n');
 }
 
+function prefillDebtStatementDefaults(){ const dateInput=byId('dsDueDate'); if(dateInput && !dateInput.value) dateInput.value=new Date().toISOString().slice(0,10); }
+function toggleDebtStatementFields(){ const wrapper=byId('debtStatementFields'); const prompt=byId('aiPromptInput')?.value || ''; if(!wrapper) return; const show=isDebtStatementPrompt(prompt); wrapper.classList.toggle('hidden', !show); if(show) prefillDebtStatementDefaults(); }
+function buildDebtStatementContext(){ const val=(id)=>byId(id)?.value?.trim()||''; const breakdown=getRadioValue('dsBreakdown'); const breakdownMap={full:'celkový dluh', principal:'jen jistina', principal_accessories:'jistina a příslušenství', costs:'jen náklady'}; const lines=['FORMULÁŘ: ŽÁDOST O VYČÍSLENÍ DLUHU',val('dsDueDate')?`Vyčíslení ke dni: ${val('dsDueDate')}`:'',val('dsCaseNo')?`Číslo jednací / číslo exekuce: ${val('dsCaseNo')}`:'',val('dsRecipientInfo')?`Adresát / oprávněný / exekutor: ${val('dsRecipientInfo')}`:'',val('dsDebtorInfo')?`Dlužník / povinný: ${val('dsDebtorInfo')}`:'',breakdownMap[breakdown]?`Požadovaný rozsah vyčíslení: ${breakdownMap[breakdown]}`:'',val('dsNote')?`Upřesnění: ${val('dsNote')}`:'','ZÁVĚR:','Žádám o sdělení aktuální výše dluhu ke zvolenému dni, ideálně s přehledným rozpisem jednotlivých složek dluhu.']; return lines.filter(Boolean).join('\n'); }
 function prefillStopExecutionDefaults(){ const dateInput=byId('seDate'); if(dateInput&&!dateInput.value) dateInput.value=new Date().toISOString().slice(0,10); }
 function toggleStopExecutionSubsections(){ const role=getRadioValue('seNavrhovatelRole')||'povinny'; const opravnenyPO=!!byId('seOpravnenyPO')?.checked; const povinnyPO=!!byId('sePovinnyPO')?.checked; const spouseActive=!!byId('seSpouseActive')?.checked; const costsActive=!!byId('seCostsActive')?.checked; const noticeNotDelivered=!!byId('seNoticeNotDelivered')?.checked; const filingType=getRadioValue('seFilingType')||'listinne'; byId('seOpravnenyRepWrap')?.classList.toggle('hidden', !opravnenyPO); byId('sePovinnyRepWrap')?.classList.toggle('hidden', !povinnyPO); byId('seSpouseWrap')?.classList.toggle('hidden', !spouseActive); byId('seCostsWrap')?.classList.toggle('hidden', !costsActive); byId('seCopiesWrap')?.classList.toggle('hidden', filingType!=='listinne'); const noticeDate=byId('seNoticeDate'); if(noticeDate){noticeDate.disabled=noticeNotDelivered; if(noticeNotDelivered) noticeDate.value='';} byId('seTimeSection')?.classList.toggle('hidden', role!=='povinny'); byId('seOpravnenySection')?.classList.toggle('hidden', role==='manzel_povinneho'); byId('seCostsSection')?.classList.toggle('hidden', role==='manzel_povinneho'); byId('seSpouseSection')?.classList.toggle('hidden', role!=='manzel_povinneho' && !spouseActive); }
 function toggleStopExecutionFields(){ const wrapper=byId('stopExecutionFields'); const prompt=byId('aiPromptInput')?.value || ''; if(!wrapper) return; const show=isStopExecutionPrompt(prompt); wrapper.classList.toggle('hidden', !show); if(show) prefillStopExecutionDefaults(); toggleStopExecutionSubsections(); }
@@ -332,48 +314,6 @@ function collectExclusionItems() {
     }))
     .filter((item) => item.description || item.number);
 }
-function createExclusionItemRow(item = {}, index = 0) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'installment-box exclusion-item-row';
-  wrapper.setAttribute('data-ex-item', '1');
-  wrapper.innerHTML = `<div class="installment-head" style="margin-bottom:8px;"><span class="quick-label">Položka ${index + 1}</span><button class="btn btn-secondary btn-small ex-remove-item-btn${index === 0 ? ' hidden' : ''}" type="button">Odebrat</button></div><div class="stop-grid stop-grid-2"><div class="stop-col-span-2"><label class="detail-label">Popis věci</label><textarea class="field textarea compact-textarea ex-item-description">${item.description || ''}</textarea></div><div><label class="detail-label">Číslo položky v soupisu</label><input class="field compact-field ex-item-number" type="text" value="${item.number || ''}"></div></div>`;
-  return wrapper;
-}
-function refreshExclusionItemRows() {
-  const container = byId('exItemsContainer');
-  if (!container) return;
-  const rows = [...container.querySelectorAll('[data-ex-item]')];
-  rows.forEach((row, idx) => {
-    const label = row.querySelector('.quick-label');
-    if (label) label.innerText = `Položka ${idx + 1}`;
-    const removeBtn = row.querySelector('.ex-remove-item-btn');
-    if (removeBtn) removeBtn.classList.toggle('hidden', rows.length === 1 || idx === 0);
-  });
-}
-function ensureExclusionItemRows() {
-  const container = byId('exItemsContainer');
-  if (!container) return;
-  if (!container.querySelector('[data-ex-item]')) container.appendChild(createExclusionItemRow({}, 0));
-  refreshExclusionItemRows();
-}
-function addExclusionItemRow(item = {}) {
-  const container = byId('exItemsContainer');
-  if (!container) return;
-  const rows = [...container.querySelectorAll('[data-ex-item]')];
-  container.appendChild(createExclusionItemRow(item, rows.length));
-  refreshExclusionItemRows();
-}
-function collectExclusionItems() {
-  const container = byId('exItemsContainer');
-  if (!container) return [];
-  return [...container.querySelectorAll('[data-ex-item]')]
-    .map((row) => ({
-      description: row.querySelector('.ex-item-description')?.value?.trim() || '',
-      number: row.querySelector('.ex-item-number')?.value?.trim() || ''
-    }))
-    .filter((item) => item.description || item.number);
-}
-
 function prefillExclusionDefaults(){ const dateInput = byId('exDate'); if(dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0,10); }
 function toggleExclusionFields(){ const wrapper = byId('exclusionFields'); const prompt = byId('aiPromptInput')?.value || ''; if(!wrapper) return; const show = isExclusionPrompt(prompt); wrapper.classList.toggle('hidden', !show); if(show){ prefillExclusionDefaults(); ensureExclusionItemRows(); } }
 function buildExclusionContext(){
@@ -438,7 +378,7 @@ const show = isInstallmentPrompt(prompt) ||
   isStopExecutionPrompt(prompt) ||
   prompt.trim().length > 0;
  wrapper.classList.toggle('hidden', !show); }
-async function handleCommonExtractFromPdf(){ const prompt = byId('aiPromptInput')?.value || ''; if(isInstallmentPrompt(prompt)){ const debtAmount = await extractDebtAmountFromPdf(); const debtInput = byId('debtAmountInput'); if(debtInput){ debtInput.value = debtAmount; recalcInstallmentFields('debt'); } showToast(debtAmount ? 'Dlužná částka byla načtena z PDF.' : 'Dlužná částka v PDF nebyla nalezena.'); return; } if(isStopExecutionPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); fillStopExecutionForm(data); showToast('Formulář zastavení exekuce byl předvyplněn z PDF.'); return; } if(isPostponementPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.exekutor && byId('peExecutor')) byId('peExecutor').value = data.exekutor; if(data.exekutorskyUrad && byId('peOffice')) byId('peOffice').value = data.exekutorskyUrad; if(data.adresaUradu && byId('peOfficeAddress')) byId('peOfficeAddress').value = data.adresaUradu; if(data.spisovaZnacka && byId('peCaseNo')) byId('peCaseNo').value = data.spisovaZnacka; if(data.povinny && byId('peDebtorName')) byId('peDebtorName').value = data.povinny; showToast('Základní údaje pro odklad exekuce byly načteny z PDF.'); return; } if(isCooperationPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.spisovaZnacka && byId('coCaseNo')) byId('coCaseNo').value = data.spisovaZnacka; if(data.povinny && byId('coSubject')) byId('coSubject').value = data.povinny; showToast('Základní údaje pro součinnost byly načteny z PDF.'); return; } if(isExclusionPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.exekutorskyUrad && byId('exOfficeName')) byId('exOfficeName').value = data.exekutorskyUrad; if(data.adresaUradu && byId('exOfficeAddress')) byId('exOfficeAddress').value = data.adresaUradu; if(data.spisovaZnacka && byId('exCaseNo')) byId('exCaseNo').value = data.spisovaZnacka; if(data.opravneny && byId('exCreditorName')) byId('exCreditorName').value = data.opravneny; if(data.povinny && byId('exDebtorName')) byId('exDebtorName').value = data.povinny; showToast('Základní údaje pro vyškrtnutí byly načteny z PDF.'); return; } if(isMergeExecutionsPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.opravneny && byId('meCreditorName')) byId('meCreditorName').value = data.opravneny; if(data.povinny && byId('meApplicantName')) byId('meApplicantName').value = data.povinny; if(data.exekutor && byId('meExecutor1')) byId('meExecutor1').value = data.exekutor; if(data.spisovaZnacka && byId('meCases1')) byId('meCases1').value = data.spisovaZnacka; showToast('Základní údaje pro sloučení exekucí byly načteny z PDF.'); return; } if(isExclusionLawsuitPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.opravneny && byId('vlDefendantName')) byId('vlDefendantName').value = data.opravneny; if(data.povinny && byId('vlDebtorName')) byId('vlDebtorName').value = data.povinny; if(data.exekutorskyUrad && byId('vlOfficeName')) byId('vlOfficeName').value = data.exekutorskyUrad; if(data.spisovaZnacka && byId('vlCaseNo')) byId('vlCaseNo').value = data.spisovaZnacka; showToast('Základní údaje pro vylučovací žalobu byly načteny z PDF.'); return; } showError('Pro tento typ formuláře zatím nemáme automatické načtení z PDF.'); }
+async function handleCommonExtractFromPdf(){ const prompt = byId('aiPromptInput')?.value || ''; if(isInstallmentPrompt(prompt)){ const debtAmount = await extractDebtAmountFromPdf(); const debtInput = byId('debtAmountInput'); if(debtInput){ debtInput.value = debtAmount; recalcInstallmentFields('debt'); } showToast(debtAmount ? 'Dlužná částka byla načtena z PDF.' : 'Dlužná částka v PDF nebyla nalezena.'); return; } if(isDebtStatementPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.spisovaZnacka && byId('dsCaseNo')) byId('dsCaseNo').value = data.spisovaZnacka; const recipientInfo = [data.exekutorskyUrad, data.exekutor, data.opravneny].filter(Boolean).join(' | '); if(recipientInfo && byId('dsRecipientInfo')) byId('dsRecipientInfo').value = recipientInfo; if(data.povinny && byId('dsDebtorInfo')) byId('dsDebtorInfo').value = data.povinny; showToast('Základní údaje pro vyčíslení dluhu byly načteny z PDF.'); return; } if(isStopExecutionPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); fillStopExecutionForm(data); showToast('Formulář zastavení exekuce byl předvyplněn z PDF.'); return; } if(isPostponementPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.exekutor && byId('peExecutor')) byId('peExecutor').value = data.exekutor; if(data.exekutorskyUrad && byId('peOffice')) byId('peOffice').value = data.exekutorskyUrad; if(data.adresaUradu && byId('peOfficeAddress')) byId('peOfficeAddress').value = data.adresaUradu; if(data.spisovaZnacka && byId('peCaseNo')) byId('peCaseNo').value = data.spisovaZnacka; if(data.povinny && byId('peDebtorName')) byId('peDebtorName').value = data.povinny; showToast('Základní údaje pro odklad exekuce byly načteny z PDF.'); return; } if(isCooperationPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.spisovaZnacka && byId('coCaseNo')) byId('coCaseNo').value = data.spisovaZnacka; if(data.povinny && byId('coSubject')) byId('coSubject').value = data.povinny; showToast('Základní údaje pro součinnost byly načteny z PDF.'); return; } if(isExclusionPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.exekutorskyUrad && byId('exOfficeName')) byId('exOfficeName').value = data.exekutorskyUrad; if(data.adresaUradu && byId('exOfficeAddress')) byId('exOfficeAddress').value = data.adresaUradu; if(data.spisovaZnacka && byId('exCaseNo')) byId('exCaseNo').value = data.spisovaZnacka; if(data.opravneny && byId('exCreditorName')) byId('exCreditorName').value = data.opravneny; if(data.povinny && byId('exDebtorName')) byId('exDebtorName').value = data.povinny; showToast('Základní údaje pro vyškrtnutí byly načteny z PDF.'); return; } if(isMergeExecutionsPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.opravneny && byId('meCreditorName')) byId('meCreditorName').value = data.opravneny; if(data.povinny && byId('meApplicantName')) byId('meApplicantName').value = data.povinny; if(data.exekutor && byId('meExecutor1')) byId('meExecutor1').value = data.exekutor; if(data.spisovaZnacka && byId('meCases1')) byId('meCases1').value = data.spisovaZnacka; showToast('Základní údaje pro sloučení exekucí byly načteny z PDF.'); return; } if(isExclusionLawsuitPrompt(prompt)){ const data = await extractStopExecutionFromPdf(); if(data.opravneny && byId('vlDefendantName')) byId('vlDefendantName').value = data.opravneny; if(data.povinny && byId('vlDebtorName')) byId('vlDebtorName').value = data.povinny; if(data.exekutorskyUrad && byId('vlOfficeName')) byId('vlOfficeName').value = data.exekutorskyUrad; if(data.spisovaZnacka && byId('vlCaseNo')) byId('vlCaseNo').value = data.spisovaZnacka; showToast('Základní údaje pro vylučovací žalobu byly načteny z PDF.'); return; } showError('Pro tento typ formuláře zatím nemáme automatické načtení z PDF.'); }
 async function extractDebtAmountFromPdf(){ const file=getSelectedFile(); if(!file) throw new Error('Nejdřív nahrajte PDF.'); const formData=new FormData(); formData.append('pdf',file); const response=await fetch('/api/extract-debt',{method:'POST',body:formData}); const result=await response.json(); if(!response.ok||!result.ok) throw new Error(result.error||'Nepodařilo se načíst dlužnou částku z PDF.'); return result.debtAmount||''; }
 async function extractStopExecutionFromPdf(){ const file=getSelectedFile(); if(!file) throw new Error('Nejdřív nahrajte PDF.'); const formData=new FormData(); formData.append('pdf',file); const response=await fetch('/api/extract-stop-execution',{method:'POST',body:formData}); const result=await response.json(); if(!response.ok||!result.ok) throw new Error(result.error||'Extrakce údajů z PDF selhala.'); return result.data||{}; }
 
@@ -573,6 +513,7 @@ function bindEvents(){
   toggleStopExecutionFields();
   togglePostponementFields();
   toggleCooperationFields();
+  toggleDebtStatementFields();
   toggleExclusionFields();
   ensureExclusionItemRows();
   toggleMergeFields();
@@ -582,21 +523,17 @@ function bindEvents(){
   updateStatus();
 });
   byId('closeDetail')?.addEventListener('click',closeContactDetail);
-  byId('useAsRecipientBtn')?.addEventListener('click', setDocumentRecipientFromSelected);
+  byId('useAsRecipientBtn')?.addEventListener('click',setDocumentRecipientFromSelected);
   byId('toggleContextBtn')?.addEventListener('click',()=>byId('contextWrapper')?.classList.toggle('hidden'));
   byId('debtAmountInput')?.addEventListener('input',()=>recalcInstallmentFields('debt'));
   byId('monthsInput')?.addEventListener('input',()=>recalcInstallmentFields('months'));
   byId('monthlyPaymentInput')?.addEventListener('input',()=>recalcInstallmentFields('payment'));
-  byId('extractDebtBtn')?.addEventListener('click',async()=>{ try{ const debtAmount=await extractDebtAmountFromPdf(); const debtInput=byId('debtAmountInput'); if(debtInput){ debtInput.value=debtAmount; recalcInstallmentFields('debt'); } showToast(debtAmount?'Dlužná částka byla načtena z PDF.':'Dlužná částka v PDF nebyla nalezena.'); } catch(error){ showError(error.message);} });
-  byId('extractStopExecutionBtn')?.addEventListener('click',async()=>{ try{ const data=await extractStopExecutionFromPdf(); fillStopExecutionForm(data); showToast('Formulář zastavení exekuce byl předvyplněn z PDF.'); } catch(error){ showError(error.message);} });
   byId('commonExtractBtn')?.addEventListener('click', async()=>{ try{ await handleCommonExtractFromPdf(); } catch(error){ showError(error.message);} });
   byId('commonPrintBtn')?.addEventListener('click',()=>{ if (byId('docContent')?.classList.contains('hidden')) { showError('Nejdřív vygenerujte listinu.'); return; } window.print(); });
   byId('commonDocxBtn')?.addEventListener('click', async()=>{ try{ await downloadDocx(); showToast('Soubor DOCX byl stažen.'); } catch(error){ showError(error.message);} });
   byId('commonPdfBtn')?.addEventListener('click',()=>{ if (byId('docContent')?.classList.contains('hidden')) { showError('Nejdřív vygenerujte listinu.'); return; } window.print(); });
   byId('seOpravnenyPO')?.addEventListener('change',toggleStopExecutionSubsections); byId('sePovinnyPO')?.addEventListener('change',toggleStopExecutionSubsections); byId('seSpouseActive')?.addEventListener('change',toggleStopExecutionSubsections); byId('seCostsActive')?.addEventListener('change',toggleStopExecutionSubsections); byId('seNoticeNotDelivered')?.addEventListener('change',toggleStopExecutionSubsections); document.querySelectorAll('input[name="seFilingType"]').forEach((el)=>el.addEventListener('change',toggleStopExecutionSubsections)); document.querySelectorAll('input[name="seNavrhovatelRole"]').forEach((el)=>el.addEventListener('change',toggleStopExecutionSubsections));
-  byId('peUntilDate')?.addEventListener('input',togglePostponementSubsections); byId('peMonths')?.addEventListener('input',togglePostponementSubsections); 
-  byId('addExclusionItemBtn')?.addEventListener('click',()=>addExclusionItemRow());
-  byId('exItemsContainer')?.addEventListener('click',(e)=>{ const btn = e.target.closest('.ex-remove-item-btn'); if(!btn) return; const row = btn.closest('[data-ex-item]'); row?.remove(); ensureExclusionItemRows(); });  byId('addExclusionItemBtn')?.addEventListener('click',()=>addExclusionItemRow());
+  byId('peUntilDate')?.addEventListener('input',togglePostponementSubsections); byId('peMonths')?.addEventListener('input',togglePostponementSubsections);  byId('addExclusionItemBtn')?.addEventListener('click',()=>addExclusionItemRow());
   byId('exItemsContainer')?.addEventListener('click',(e)=>{ const btn = e.target.closest('.ex-remove-item-btn'); if(!btn) return; const row = btn.closest('[data-ex-item]'); row?.remove(); ensureExclusionItemRows(); });
 
   byId('aiGenerateBtn')?.addEventListener('click',async()=>{ try{ setLoading(true); const result=await generateDocumentViaServer(); renderDocument(result); showToast('Listina byla úspěšně vygenerována.'); } catch(error){ showError(error.message);} finally{ setLoading(false);} });
@@ -618,6 +555,7 @@ async function initApp(){
   toggleStopExecutionFields();
   togglePostponementFields();
   toggleCooperationFields();
+  toggleDebtStatementFields();
   toggleExclusionFields();
   ensureExclusionItemRows();
   toggleMergeFields();

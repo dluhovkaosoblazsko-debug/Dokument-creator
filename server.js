@@ -83,9 +83,186 @@ const DATA_FILES = [
   path.join(__dirname, "data", "default-exekutori.json")
 ];
 
+const PDF_RELEVANCE_RULES = `
+### OBECNÉ PRAVIDLO PRO ČTENÍ PDF A POSOUZENÍ RELEVANCE DAT
+
+Vždy nejprve přečti celé PDF, ne pouze první stránku, první blok textu nebo první rozpoznanou sekci.
+
+Nejprve určete typ dokumentu podle jeho obsahu, například:
+- exekuční návrh
+- usnesení
+- rozsudek
+- výzva
+- formulář
+- insolvenční návrh
+- návrh na oddlužení
+- žaloba
+- vyjádření
+- jiné procesní podání
+
+Teprve po určení typu dokumentu posuď, které údaje jsou pro daný typ dokumentu relevantní.
+
+Při extrakci nikdy neignoruj identifikační údaje účastníků jen proto, že nejsou v záhlaví nebo na první stránce. Relevantní údaje mohou být uvedeny také:
+- v označení účastníků
+- v odůvodnění
+- ve výroku
+- v tabulkách
+- v přílohách
+- v poznámkách
+- v dalších blocích dokumentu
+
+U každého účastníka vždy aktivně hledej a využij všechny relevantní identifikační údaje, zejména:
+- jméno a příjmení / název subjektu
+- adresa bydliště / sídla / doručovací adresa
+- datum narození
+- rodné číslo
+- IČO
+- datová schránka
+- e-mail
+- telefon
+- další identifikátory, pokud jsou zjevně součástí identifikace účastníka
+
+Pokud dokument nepoužívá výrazy „povinný“ a „oprávněný“, mapuj role podle významu a typu dokumentu:
+- exekuce: oprávněný / povinný
+- insolvence a oddlužení: věřitel / dlužník
+- civilní řízení: žalobce / žalovaný
+- návrhová řízení: navrhovatel / odpůrce
+- obecně: účastník řízení podle významu v textu
+
+Při více výskytech stejného údaje použij tento prioritní princip:
+1. údaj výslovně přiřazený ke konkrétní osobě nebo subjektu
+2. údaj uvedený v sekci označení účastníků
+3. údaj uvedený ve formulářovém poli
+4. údaj uvedený jinde v textu, pokud je zjevně přiřaditelný ke konkrétnímu účastníkovi
+
+Pokud existuje více adres, rozlišuj podle významu:
+- trvalé bydliště
+- doručovací adresa
+- sídlo
+- provozovna
+
+Pokud typ adresy není jasný, použij ji jako obecnou adresu účastníka.
+
+Nevynechávej relevantní údaje jen proto, že nejsou požadovány ve všech typech dokumentů. Vždy posuzuj relevanci vzhledem ke konkrétnímu typu dokumentu.
+
+Pokud je údaj v PDF uveden jasně a je relevantní pro identifikaci účastníka nebo pro vyplnění výsledného dokumentu, použij jej.
+
+Pokud je údaj nečitelný, neúplný nebo nejistý:
+- nevymýšlej ho
+- nedopočítávej ho
+- nepřepisuj ho odhadem
+- ponech odpovídající pole prázdné
+
+Pokud je v dokumentu dostatek údajů pro rozpoznání role osoby, ale role není pojmenována přesně, určete ji podle kontextu dokumentu.
+
+Cílem je vždy:
+- přečíst celé PDF
+- určit typ dokumentu
+- určit role účastníků
+- vyhodnotit relevantnost údajů
+- vytěžit všechny relevantní identifikační údaje pro daný typ dokumentu
+- nic podstatného nevynechat
+
+### DOPLŇUJÍCÍ PRAVIDLO PRO EXTRAKCI ÚČASTNÍKŮ
+
+U účastníků řízení vždy samostatně vyhodnocuj:
+- kdo je hlavní osoba nebo subjekt
+- jaká je jeho role v dokumentu
+- které identifikační údaje k němu patří
+- které z těchto údajů jsou relevantní pro výstup
+
+Neber pouze první nalezený údaj. Vždy zkontroluj, zda nejsou v dalších částech PDF uvedeny doplňující nebo přesnější identifikační údaje stejného účastníka.
+`;
+
+
+const PDF_IDENTITY_SPLIT_RULES = `
+### PRAVIDLO PRO ODDĚLENÍ IDENTIFIKAČNÍCH ÚDAJŮ ODESÍLATELE
+
+Pole senderName smí obsahovat pouze:
+- jméno a příjmení fyzické osoby
+- nebo název právnické osoby
+
+Do pole senderName nikdy nevkládej:
+- adresu
+- rodné číslo
+- datum narození
+- IČO
+- datovou schránku
+- e-mail
+- telefon
+- víceřádkový identifikační blok
+
+Pole senderAddress smí obsahovat pouze adresu nebo doručovací adresu odesílatele.
+
+Pokud PDF obsahuje identifikační údaje fyzické osoby, rozděl je takto:
+- jméno a příjmení -> senderName
+- adresa -> senderAddress
+- datum narození -> senderBirthDate
+- rodné číslo -> senderBirthNumber
+
+Pokud PDF obsahuje identifikační údaje právnické osoby, rozděl je takto:
+- název subjektu -> senderName
+- sídlo -> senderAddress
+- IČO -> senderIco
+
+Pokud některý z těchto údajů není jistý, nehádej ho a vrať prázdný řetězec.
+`;
+
 function normalizeText(value) {
   return String(value || "").trim();
 }
+
+function sanitizeSenderName(value) {
+  const raw = normalizeText(value);
+  if (!raw) return "";
+
+  return raw
+    .split(/\n|,/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s) => {
+      const lower = s.toLowerCase();
+      if (lower.includes("r. č")) return false;
+      if (lower.includes("rodné číslo")) return false;
+      if (lower.includes("nar.")) return false;
+      if (lower.includes("narozen")) return false;
+      if (lower.includes("datum narození")) return false;
+      if (lower.includes("ičo")) return false;
+      if (/\d{6}\/?\d{3,4}/.test(s)) return false;
+      if (/\d/.test(s) && /\d{3}\s?\d{2}/.test(s) && /[A-Za-zÁ-Žá-ž]/.test(s)) return false;
+      return true;
+    })
+    .join(" ")
+    .trim();
+}
+
+function sanitizeSenderAddress(value) {
+  const raw = normalizeText(value);
+  if (!raw) return "";
+
+  return raw
+    .split(/\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s) => {
+      const lower = s.toLowerCase();
+      if (lower.includes("r. č")) return false;
+      if (lower.includes("rodné číslo")) return false;
+      if (lower.includes("nar.")) return false;
+      if (lower.includes("narozen")) return false;
+      if (lower.includes("datum narození")) return false;
+      if (lower.includes("ičo")) return false;
+      if (lower.includes("datová schránka")) return false;
+      if (lower.includes("e-mail")) return false;
+      if (lower.includes("telefon")) return false;
+      if (/\d{6}\/?\d{3,4}/.test(s)) return false;
+      if (/^ičo[:\s]/i.test(s)) return false;
+      return true;
+    })
+    .join(", ")
+    .trim();
+}
+
 
 function buildSearchText(...parts) {
   return parts.map((p) => normalizeText(p).toLowerCase()).filter(Boolean).join(" ");
@@ -333,6 +510,8 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
     "Jsi přesný právní asistent.",
     `Typ dokumentu: ${profile.label}.`,
     profile.system,
+    PDF_RELEVANCE_RULES,
+    PDF_IDENTITY_SPLIT_RULES,
     "Vytvoř formální úřední listinu v češtině odpovídající typu dokumentu.",
     "Použij údaje o odesílateli z přiloženého PDF, pokud jsou čitelné.",
     `Příjemce: ${recipient.nazev}, adresa nebo město: ${recipient.adresa || recipient.mesto}, datová schránka: ${recipient.ds}.`,
@@ -340,7 +519,7 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
     "Pokud některý údaj chybí, napiš text neutrálně a bez doplňování smyšlených detailů.",
     "Tělo listiny musí být věcné, přehledné a přizpůsobené konkrétnímu typu podání.",
     "Vrať pouze validní JSON bez markdownu.",
-    'Použij schéma: {"senderName":"","senderAddress":"","refData":"","title":"","body":""}'
+    'Použij schéma: {"senderName":"","senderAddress":"","senderBirthDate":"","senderBirthNumber":"","senderIco":"","refData":"","title":"","body":""}'
   ].join(" ");
 
   const userQuery = [
@@ -374,8 +553,11 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
   });
 
   return {
-    senderName: normalizeText(parsed.senderName) || "Neuvedeno",
-    senderAddress: normalizeText(parsed.senderAddress) || "Neuvedeno",
+    senderName: sanitizeSenderName(parsed.senderName) || "Neuvedeno",
+    senderAddress: sanitizeSenderAddress(parsed.senderAddress) || "Neuvedeno",
+    senderBirthDate: normalizeText(parsed.senderBirthDate) || "",
+    senderBirthNumber: normalizeText(parsed.senderBirthNumber) || "",
+    senderIco: normalizeText(parsed.senderIco) || "",
     refData: normalizeText(parsed.refData) || "---",
     title: normalizeText(parsed.title) || profile.label,
     body: normalizeText(parsed.body) || ""
@@ -388,6 +570,7 @@ async function extractDebtAmountFromPdf(pdfBase64) {
       parts: [{
         text: [
           "Jsi přesný extraktor údajů z právních dokumentů.",
+          PDF_RELEVANCE_RULES,
           "Najdi v PDF dlužnou částku nebo vymáhanou částku.",
           "Vrať pouze validní JSON bez markdownu.",
           'Použij schéma: {"debtAmount":""}'
@@ -406,6 +589,7 @@ async function extractStopExecutionFromPdf(pdfBase64) {
       parts: [{
         text: [
           "Jsi extraktor údajů z exekučních dokumentů.",
+          PDF_RELEVANCE_RULES,
           "Najdi klíčové údaje pro návrh na zastavení exekuce.",
           "Vrať pouze validní JSON bez markdownu.",
           "Použij schéma:",
@@ -523,6 +707,9 @@ app.post("/api/export-docx", async (req, res) => {
     const {
       senderName,
       senderAddress,
+      senderBirthDate,
+      senderBirthNumber,
+      senderIco,
       recipientName,
       recipientAddress,
       refData,
@@ -543,6 +730,9 @@ app.post("/api/export-docx", async (req, res) => {
               ]
             }),
             new Paragraph(senderAddress || "---"),
+            ...(senderBirthDate ? [new Paragraph({ children: [new TextRun({ text: "DATUM NAROZENÍ: ", bold: true }), new TextRun(senderBirthDate)] })] : []),
+            ...(senderBirthNumber ? [new Paragraph({ children: [new TextRun({ text: "RODNÉ ČÍSLO: ", bold: true }), new TextRun(senderBirthNumber)] })] : []),
+            ...(senderIco ? [new Paragraph({ children: [new TextRun({ text: "IČO: ", bold: true }), new TextRun(senderIco)] })] : []),
             new Paragraph(""),
             new Paragraph({
               children: [
@@ -613,3 +803,5 @@ app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.ht
 
 loadContactsFromFiles();
 app.listen(PORT, () => console.log(`Server běží na http://localhost:${PORT}`));
+
+// debt_statement profile already injected in previous step
