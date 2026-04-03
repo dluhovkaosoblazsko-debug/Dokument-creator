@@ -44,7 +44,8 @@ app.use(
         frameAncestors: [
           "'self'",
           "http://localhost:3000",
-          "https://portal-040d.onrender.com/
+          "https://portal-040d.onrender.com"
+        ]  
       }
     }
   })
