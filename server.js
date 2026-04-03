@@ -30,6 +30,7 @@ if (!GEMINI_API_KEY) {
 app.use(
   helmet({
     crossOriginEmbedderPolicy: false,
+    frameguard: false,
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -40,7 +41,10 @@ app.use(
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
-        frameAncestors: ["'self'"]
+        frameAncestors: [
+          "'self'",
+          "http://localhost:3000",
+          "https://portal-040d.onrender.com/
       }
     }
   })
