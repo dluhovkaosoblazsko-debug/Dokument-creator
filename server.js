@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Header } from "docx";
+﻿import { Document, Packer, Paragraph, TextRun, AlignmentType, Header } from "docx";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -18,12 +18,14 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const MAX_FILE_SIZE_MB = Number(process.env.MAX_FILE_SIZE_MB || 10);
 const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
+const BASIC_AUTH_USER = process.env.BASIC_AUTH_USER || "";
+const BASIC_AUTH_PASSWORD = process.env.BASIC_AUTH_PASSWORD || "";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 if (!GEMINI_API_KEY) {
-  console.error("ChybÄ‚Â­ GEMINI_API_KEY v .env");
+  console.error("ChybĂ„â€šĂ‚Â­ GEMINI_API_KEY v .env");
   process.exit(1);
 }
 
@@ -55,6 +57,54 @@ app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+function decodeBasicAuthHeader(authHeader = "") {
+  if (!authHeader.startsWith("Basic ")) {
+    return null;
+  }
+
+  try {
+    const encoded = authHeader.slice(6);
+    const decoded = Buffer.from(encoded, "base64").toString("utf8");
+    const separatorIndex = decoded.indexOf(":");
+
+    if (separatorIndex === -1) {
+      return null;
+    }
+
+    return {
+      username: decoded.slice(0, separatorIndex),
+      password: decoded.slice(separatorIndex + 1)
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+function basicAuthMiddleware(req, res, next) {
+  if (!BASIC_AUTH_USER || !BASIC_AUTH_PASSWORD) {
+    return next();
+  }
+
+  const credentials = decodeBasicAuthHeader(req.headers.authorization || "");
+
+  if (
+    credentials?.username === BASIC_AUTH_USER &&
+    credentials?.password === BASIC_AUTH_PASSWORD
+  ) {
+    return next();
+  }
+
+  res.setHeader("WWW-Authenticate", 'Basic realm="Databáze", charset="UTF-8"');
+  return res.status(401).send("Vyžadováno přihlášení.");
+}
+
+if (BASIC_AUTH_USER && BASIC_AUTH_PASSWORD) {
+  console.log("Basic Auth je aktivní.");
+} else if (BASIC_AUTH_USER || BASIC_AUTH_PASSWORD) {
+  console.warn("Basic Auth není aktivní: musí být nastavené BASIC_AUTH_USER i BASIC_AUTH_PASSWORD.");
+}
+app.use(basicAuthMiddleware);
+
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -62,7 +112,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 
-  // Ă˘Ĺ›â€¦ KLÄ‚Ĺ¤Ă„ĹšOVÄ‚ĹĄ ÄąÂÄ‚ÂDEK PRO RENDER
+  // Ä‚ËÄąâ€şĂ˘â‚¬Â¦ KLĂ„â€šÄąÂ¤Ä‚â€žÄąĹˇOVĂ„â€šÄąÄ„ Ă„Ä…Ă‚ÂĂ„â€šĂ‚ÂDEK PRO RENDER
   keyGenerator: (req) => req.ip
 });
 
@@ -89,128 +139,128 @@ const DATA_FILES = [
 ];
 
 const PDF_RELEVANCE_RULES = `
-### OBECNÄ‚â€° PRAVIDLO PRO Ă„ĹšTENÄ‚Ĺ¤ PDF A POSOUZENÄ‚Ĺ¤ RELEVANCE DAT
+### OBECNĂ„â€šĂ˘â‚¬Â° PRAVIDLO PRO Ä‚â€žÄąĹˇTENĂ„â€šÄąÂ¤ PDF A POSOUZENĂ„â€šÄąÂ¤ RELEVANCE DAT
 
-VÄąÄľdy nejprve pÄąâ„˘eĂ„Ĺ¤ti celÄ‚Â© PDF, ne pouze prvnÄ‚Â­ strÄ‚Ë‡nku, prvnÄ‚Â­ blok textu nebo prvnÄ‚Â­ rozpoznanou sekci.
+VĂ„Ä…Ă„Äľdy nejprve pĂ„Ä…Ă˘â€žËeÄ‚â€žÄąÂ¤ti celĂ„â€šĂ‚Â© PDF, ne pouze prvnĂ„â€šĂ‚Â­ strĂ„â€šĂ‹â€ˇnku, prvnĂ„â€šĂ‚Â­ blok textu nebo prvnĂ„â€šĂ‚Â­ rozpoznanou sekci.
 
-Nejprve urĂ„Ĺ¤ete typ dokumentu podle jeho obsahu, napÄąâ„˘Ä‚Â­klad:
-- exekuĂ„Ĺ¤nÄ‚Â­ nÄ‚Ë‡vrh
-- usnesenÄ‚Â­
+Nejprve urÄ‚â€žÄąÂ¤ete typ dokumentu podle jeho obsahu, napĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­klad:
+- exekuÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ nĂ„â€šĂ‹â€ˇvrh
+- usnesenĂ„â€šĂ‚Â­
 - rozsudek
-- vÄ‚Ëťzva
-- formulÄ‚Ë‡Äąâ„˘
-- insolvenĂ„Ĺ¤nÄ‚Â­ nÄ‚Ë‡vrh
-- nÄ‚Ë‡vrh na oddluÄąÄľenÄ‚Â­
-- ÄąÄľaloba
-- vyjÄ‚Ë‡dÄąâ„˘enÄ‚Â­
-- jinÄ‚Â© procesnÄ‚Â­ podÄ‚Ë‡nÄ‚Â­
+- vĂ„â€šĂ‹ĹĄzva
+- formulĂ„â€šĂ‹â€ˇĂ„Ä…Ă˘â€žË
+- insolvenÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ nĂ„â€šĂ‹â€ˇvrh
+- nĂ„â€šĂ‹â€ˇvrh na oddluĂ„Ä…Ă„ÄľenĂ„â€šĂ‚Â­
+- Ă„Ä…Ă„Äľaloba
+- vyjĂ„â€šĂ‹â€ˇdĂ„Ä…Ă˘â€žËenĂ„â€šĂ‚Â­
+- jinĂ„â€šĂ‚Â© procesnĂ„â€šĂ‚Â­ podĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­
 
-Teprve po urĂ„Ĺ¤enÄ‚Â­ typu dokumentu posuĂ„Ĺą, kterÄ‚Â© Ä‚Ĺźdaje jsou pro danÄ‚Ëť typ dokumentu relevantnÄ‚Â­.
+Teprve po urÄ‚â€žÄąÂ¤enĂ„â€šĂ‚Â­ typu dokumentu posuÄ‚â€žÄąÄ…, kterĂ„â€šĂ‚Â© Ă„â€šÄąĹşdaje jsou pro danĂ„â€šĂ‹ĹĄ typ dokumentu relevantnĂ„â€šĂ‚Â­.
 
-PÄąâ„˘i extrakci nikdy neignoruj identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ» jen proto, ÄąÄľe nejsou v zÄ‚Ë‡hlavÄ‚Â­ nebo na prvnÄ‚Â­ strÄ‚Ë‡nce. RelevantnÄ‚Â­ Ä‚Ĺźdaje mohou bÄ‚Ëťt uvedeny takÄ‚Â©:
-- v oznaĂ„Ĺ¤enÄ‚Â­ Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ»
-- v odÄąĹ»vodnĂ„â€şnÄ‚Â­
-- ve vÄ‚Ëťroku
-- v tabulkÄ‚Ë‡ch
-- v pÄąâ„˘Ä‚Â­lohÄ‚Ë‡ch
-- v poznÄ‚Ë‡mkÄ‚Ë‡ch
-- v dalÄąË‡Ä‚Â­ch blocÄ‚Â­ch dokumentu
+PĂ„Ä…Ă˘â€žËi extrakci nikdy neignoruj identifikaÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­kĂ„Ä…ÄąÂ» jen proto, Ă„Ä…Ă„Äľe nejsou v zĂ„â€šĂ‹â€ˇhlavĂ„â€šĂ‚Â­ nebo na prvnĂ„â€šĂ‚Â­ strĂ„â€šĂ‹â€ˇnce. RelevantnĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje mohou bĂ„â€šĂ‹ĹĄt uvedeny takĂ„â€šĂ‚Â©:
+- v oznaÄ‚â€žÄąÂ¤enĂ„â€šĂ‚Â­ Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­kĂ„Ä…ÄąÂ»
+- v odĂ„Ä…ÄąÂ»vodnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‚Â­
+- ve vĂ„â€šĂ‹ĹĄroku
+- v tabulkĂ„â€šĂ‹â€ˇch
+- v pĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­lohĂ„â€šĂ‹â€ˇch
+- v poznĂ„â€šĂ‹â€ˇmkĂ„â€šĂ‹â€ˇch
+- v dalĂ„Ä…Ă‹â€ˇĂ„â€šĂ‚Â­ch blocĂ„â€šĂ‚Â­ch dokumentu
 
-U kaÄąÄľdÄ‚Â©ho Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka vÄąÄľdy aktivnĂ„â€ş hledej a vyuÄąÄľij vÄąË‡echny relevantnÄ‚Â­ identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje, zejmÄ‚Â©na:
-- jmÄ‚Â©no a pÄąâ„˘Ä‚Â­jmenÄ‚Â­ / nÄ‚Ë‡zev subjektu
-- adresa bydliÄąË‡tĂ„â€ş / sÄ‚Â­dla / doruĂ„Ĺ¤ovacÄ‚Â­ adresa
-- datum narozenÄ‚Â­
-- rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo
-- IĂ„ĹšO
-- datovÄ‚Ë‡ schrÄ‚Ë‡nka
+U kaĂ„Ä…Ă„ÄľdĂ„â€šĂ‚Â©ho Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­ka vĂ„Ä…Ă„Äľdy aktivnÄ‚â€žĂ˘â‚¬Ĺź hledej a vyuĂ„Ä…Ă„Äľij vĂ„Ä…Ă‹â€ˇechny relevantnĂ„â€šĂ‚Â­ identifikaÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje, zejmĂ„â€šĂ‚Â©na:
+- jmĂ„â€šĂ‚Â©no a pĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­jmenĂ„â€šĂ‚Â­ / nĂ„â€šĂ‹â€ˇzev subjektu
+- adresa bydliĂ„Ä…Ă‹â€ˇtÄ‚â€žĂ˘â‚¬Ĺź / sĂ„â€šĂ‚Â­dla / doruÄ‚â€žÄąÂ¤ovacĂ„â€šĂ‚Â­ adresa
+- datum narozenĂ„â€šĂ‚Â­
+- rodnĂ„â€šĂ‚Â© Ä‚â€žÄąÂ¤Ă„â€šĂ‚Â­slo
+- IÄ‚â€žÄąĹˇO
+- datovĂ„â€šĂ‹â€ˇ schrĂ„â€šĂ‹â€ˇnka
 - e-mail
 - telefon
-- dalÄąË‡Ä‚Â­ identifikÄ‚Ë‡tory, pokud jsou zjevnĂ„â€ş souĂ„Ĺ¤Ä‚Ë‡stÄ‚Â­ identifikace Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka
+- dalĂ„Ä…Ă‹â€ˇĂ„â€šĂ‚Â­ identifikĂ„â€šĂ‹â€ˇtory, pokud jsou zjevnÄ‚â€žĂ˘â‚¬Ĺź souÄ‚â€žÄąÂ¤Ă„â€šĂ‹â€ˇstĂ„â€šĂ‚Â­ identifikace Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­ka
 
-Pokud dokument nepouÄąÄľÄ‚Â­vÄ‚Ë‡ vÄ‚Ëťrazy Ă˘â‚¬ĹľpovinnÄ‚ËťĂ˘â‚¬Ĺ› a Ă˘â‚¬ĹľoprÄ‚Ë‡vnĂ„â€şnÄ‚ËťĂ˘â‚¬Ĺ›, mapuj role podle vÄ‚Ëťznamu a typu dokumentu:
-- exekuce: oprÄ‚Ë‡vnĂ„â€şnÄ‚Ëť / povinnÄ‚Ëť
-- insolvence a oddluÄąÄľenÄ‚Â­: vĂ„â€şÄąâ„˘itel / dluÄąÄľnÄ‚Â­k
-- civilnÄ‚Â­ Äąâ„˘Ä‚Â­zenÄ‚Â­: ÄąÄľalobce / ÄąÄľalovanÄ‚Ëť
-- nÄ‚Ë‡vrhovÄ‚Ë‡ Äąâ„˘Ä‚Â­zenÄ‚Â­: navrhovatel / odpÄąĹ»rce
-- obecnĂ„â€ş: Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­k Äąâ„˘Ä‚Â­zenÄ‚Â­ podle vÄ‚Ëťznamu v textu
+Pokud dokument nepouĂ„Ä…Ă„ÄľĂ„â€šĂ‚Â­vĂ„â€šĂ‹â€ˇ vĂ„â€šĂ‹ĹĄrazy Ä‚ËĂ˘â€šÂ¬ÄąÄľpovinnĂ„â€šĂ‹ĹĄÄ‚ËĂ˘â€šÂ¬Äąâ€ş a Ä‚ËĂ˘â€šÂ¬ÄąÄľoprĂ„â€šĂ‹â€ˇvnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‹ĹĄÄ‚ËĂ˘â€šÂ¬Äąâ€ş, mapuj role podle vĂ„â€šĂ‹ĹĄznamu a typu dokumentu:
+- exekuce: oprĂ„â€šĂ‹â€ˇvnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‹ĹĄ / povinnĂ„â€šĂ‹ĹĄ
+- insolvence a oddluĂ„Ä…Ă„ÄľenĂ„â€šĂ‚Â­: vÄ‚â€žĂ˘â‚¬ĹźĂ„Ä…Ă˘â€žËitel / dluĂ„Ä…Ă„ÄľnĂ„â€šĂ‚Â­k
+- civilnĂ„â€šĂ‚Â­ Ă„Ä…Ă˘â€žËĂ„â€šĂ‚Â­zenĂ„â€šĂ‚Â­: Ă„Ä…Ă„Äľalobce / Ă„Ä…Ă„ÄľalovanĂ„â€šĂ‹ĹĄ
+- nĂ„â€šĂ‹â€ˇvrhovĂ„â€šĂ‹â€ˇ Ă„Ä…Ă˘â€žËĂ„â€šĂ‚Â­zenĂ„â€šĂ‚Â­: navrhovatel / odpĂ„Ä…ÄąÂ»rce
+- obecnÄ‚â€žĂ˘â‚¬Ĺź: Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­k Ă„Ä…Ă˘â€žËĂ„â€šĂ‚Â­zenĂ„â€šĂ‚Â­ podle vĂ„â€šĂ‹ĹĄznamu v textu
 
-PÄąâ„˘i vÄ‚Â­ce vÄ‚Ëťskytech stejnÄ‚Â©ho Ä‚Ĺźdaje pouÄąÄľij tento prioritnÄ‚Â­ princip:
-1. Ä‚Ĺźdaj vÄ‚ËťslovnĂ„â€ş pÄąâ„˘iÄąâ„˘azenÄ‚Ëť ke konkrÄ‚Â©tnÄ‚Â­ osobĂ„â€ş nebo subjektu
-2. Ä‚Ĺźdaj uvedenÄ‚Ëť v sekci oznaĂ„Ĺ¤enÄ‚Â­ Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ»
-3. Ä‚Ĺźdaj uvedenÄ‚Ëť ve formulÄ‚Ë‡Äąâ„˘ovÄ‚Â©m poli
-4. Ä‚Ĺźdaj uvedenÄ‚Ëť jinde v textu, pokud je zjevnĂ„â€ş pÄąâ„˘iÄąâ„˘aditelnÄ‚Ëť ke konkrÄ‚Â©tnÄ‚Â­mu Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kovi
+PĂ„Ä…Ă˘â€žËi vĂ„â€šĂ‚Â­ce vĂ„â€šĂ‹ĹĄskytech stejnĂ„â€šĂ‚Â©ho Ă„â€šÄąĹşdaje pouĂ„Ä…Ă„Äľij tento prioritnĂ„â€šĂ‚Â­ princip:
+1. Ă„â€šÄąĹşdaj vĂ„â€šĂ‹ĹĄslovnÄ‚â€žĂ˘â‚¬Ĺź pĂ„Ä…Ă˘â€žËiĂ„Ä…Ă˘â€žËazenĂ„â€šĂ‹ĹĄ ke konkrĂ„â€šĂ‚Â©tnĂ„â€šĂ‚Â­ osobÄ‚â€žĂ˘â‚¬Ĺź nebo subjektu
+2. Ă„â€šÄąĹşdaj uvedenĂ„â€šĂ‹ĹĄ v sekci oznaÄ‚â€žÄąÂ¤enĂ„â€šĂ‚Â­ Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­kĂ„Ä…ÄąÂ»
+3. Ă„â€šÄąĹşdaj uvedenĂ„â€šĂ‹ĹĄ ve formulĂ„â€šĂ‹â€ˇĂ„Ä…Ă˘â€žËovĂ„â€šĂ‚Â©m poli
+4. Ă„â€šÄąĹşdaj uvedenĂ„â€šĂ‹ĹĄ jinde v textu, pokud je zjevnÄ‚â€žĂ˘â‚¬Ĺź pĂ„Ä…Ă˘â€žËiĂ„Ä…Ă˘â€žËaditelnĂ„â€šĂ‹ĹĄ ke konkrĂ„â€šĂ‚Â©tnĂ„â€šĂ‚Â­mu Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­kovi
 
-Pokud existuje vÄ‚Â­ce adres, rozliÄąË‡uj podle vÄ‚Ëťznamu:
-- trvalÄ‚Â© bydliÄąË‡tĂ„â€ş
-- doruĂ„Ĺ¤ovacÄ‚Â­ adresa
-- sÄ‚Â­dlo
+Pokud existuje vĂ„â€šĂ‚Â­ce adres, rozliĂ„Ä…Ă‹â€ˇuj podle vĂ„â€šĂ‹ĹĄznamu:
+- trvalĂ„â€šĂ‚Â© bydliĂ„Ä…Ă‹â€ˇtÄ‚â€žĂ˘â‚¬Ĺź
+- doruÄ‚â€žÄąÂ¤ovacĂ„â€šĂ‚Â­ adresa
+- sĂ„â€šĂ‚Â­dlo
 - provozovna
 
-Pokud typ adresy nenÄ‚Â­ jasnÄ‚Ëť, pouÄąÄľij ji jako obecnou adresu Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka.
+Pokud typ adresy nenĂ„â€šĂ‚Â­ jasnĂ„â€šĂ‹ĹĄ, pouĂ„Ä…Ă„Äľij ji jako obecnou adresu Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­ka.
 
-NevynechÄ‚Ë‡vej relevantnÄ‚Â­ Ä‚Ĺźdaje jen proto, ÄąÄľe nejsou poÄąÄľadovÄ‚Ë‡ny ve vÄąË‡ech typech dokumentÄąĹ». VÄąÄľdy posuzuj relevanci vzhledem ke konkrÄ‚Â©tnÄ‚Â­mu typu dokumentu.
+NevynechĂ„â€šĂ‹â€ˇvej relevantnĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje jen proto, Ă„Ä…Ă„Äľe nejsou poĂ„Ä…Ă„ÄľadovĂ„â€šĂ‹â€ˇny ve vĂ„Ä…Ă‹â€ˇech typech dokumentĂ„Ä…ÄąÂ». VĂ„Ä…Ă„Äľdy posuzuj relevanci vzhledem ke konkrĂ„â€šĂ‚Â©tnĂ„â€šĂ‚Â­mu typu dokumentu.
 
-Pokud je Ä‚Ĺźdaj v PDF uveden jasnĂ„â€ş a je relevantnÄ‚Â­ pro identifikaci Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka nebo pro vyplnĂ„â€şnÄ‚Â­ vÄ‚ËťslednÄ‚Â©ho dokumentu, pouÄąÄľij jej.
+Pokud je Ă„â€šÄąĹşdaj v PDF uveden jasnÄ‚â€žĂ˘â‚¬Ĺź a je relevantnĂ„â€šĂ‚Â­ pro identifikaci Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­ka nebo pro vyplnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‚Â­ vĂ„â€šĂ‹ĹĄslednĂ„â€šĂ‚Â©ho dokumentu, pouĂ„Ä…Ă„Äľij jej.
 
-Pokud je Ä‚Ĺźdaj neĂ„Ĺ¤itelnÄ‚Ëť, neÄ‚ĹźplnÄ‚Ëť nebo nejistÄ‚Ëť:
-- nevymÄ‚ËťÄąË‡lej ho
-- nedopoĂ„Ĺ¤Ä‚Â­tÄ‚Ë‡vej ho
-- nepÄąâ„˘episuj ho odhadem
-- ponech odpovÄ‚Â­dajÄ‚Â­cÄ‚Â­ pole prÄ‚Ë‡zdnÄ‚Â©
+Pokud je Ă„â€šÄąĹşdaj neÄ‚â€žÄąÂ¤itelnĂ„â€šĂ‹ĹĄ, neĂ„â€šÄąĹşplnĂ„â€šĂ‹ĹĄ nebo nejistĂ„â€šĂ‹ĹĄ:
+- nevymĂ„â€šĂ‹ĹĄĂ„Ä…Ă‹â€ˇlej ho
+- nedopoÄ‚â€žÄąÂ¤Ă„â€šĂ‚Â­tĂ„â€šĂ‹â€ˇvej ho
+- nepĂ„Ä…Ă˘â€žËepisuj ho odhadem
+- ponech odpovĂ„â€šĂ‚Â­dajĂ„â€šĂ‚Â­cĂ„â€šĂ‚Â­ pole prĂ„â€šĂ‹â€ˇzdnĂ„â€šĂ‚Â©
 
-Pokud je v dokumentu dostatek Ä‚ĹźdajÄąĹ» pro rozpoznÄ‚Ë‡nÄ‚Â­ role osoby, ale role nenÄ‚Â­ pojmenovÄ‚Ë‡na pÄąâ„˘esnĂ„â€ş, urĂ„Ĺ¤ete ji podle kontextu dokumentu.
+Pokud je v dokumentu dostatek Ă„â€šÄąĹşdajĂ„Ä…ÄąÂ» pro rozpoznĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­ role osoby, ale role nenĂ„â€šĂ‚Â­ pojmenovĂ„â€šĂ‹â€ˇna pĂ„Ä…Ă˘â€žËesnÄ‚â€žĂ˘â‚¬Ĺź, urÄ‚â€žÄąÂ¤ete ji podle kontextu dokumentu.
 
-CÄ‚Â­lem je vÄąÄľdy:
-- pÄąâ„˘eĂ„Ĺ¤Ä‚Â­st celÄ‚Â© PDF
-- urĂ„Ĺ¤it typ dokumentu
-- urĂ„Ĺ¤it role Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ»
-- vyhodnotit relevantnost Ä‚ĹźdajÄąĹ»
-- vytĂ„â€şÄąÄľit vÄąË‡echny relevantnÄ‚Â­ identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje pro danÄ‚Ëť typ dokumentu
-- nic podstatnÄ‚Â©ho nevynechat
+CĂ„â€šĂ‚Â­lem je vĂ„Ä…Ă„Äľdy:
+- pĂ„Ä…Ă˘â€žËeÄ‚â€žÄąÂ¤Ă„â€šĂ‚Â­st celĂ„â€šĂ‚Â© PDF
+- urÄ‚â€žÄąÂ¤it typ dokumentu
+- urÄ‚â€žÄąÂ¤it role Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­kĂ„Ä…ÄąÂ»
+- vyhodnotit relevantnost Ă„â€šÄąĹşdajĂ„Ä…ÄąÂ»
+- vytÄ‚â€žĂ˘â‚¬ĹźĂ„Ä…Ă„Äľit vĂ„Ä…Ă‹â€ˇechny relevantnĂ„â€šĂ‚Â­ identifikaÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje pro danĂ„â€šĂ‹ĹĄ typ dokumentu
+- nic podstatnĂ„â€šĂ‚Â©ho nevynechat
 
-### DOPLÄąâ€ˇUJÄ‚Ĺ¤CÄ‚Ĺ¤ PRAVIDLO PRO EXTRAKCI Ä‚ĹˇĂ„ĹšASTNÄ‚Ĺ¤KÄąÂ®
+### DOPLĂ„Ä…Ă˘â‚¬Ë‡UJĂ„â€šÄąÂ¤CĂ„â€šÄąÂ¤ PRAVIDLO PRO EXTRAKCI Ă„â€šÄąË‡Ä‚â€žÄąĹˇASTNĂ„â€šÄąÂ¤KĂ„Ä…Ă‚Â®
 
-U Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ» Äąâ„˘Ä‚Â­zenÄ‚Â­ vÄąÄľdy samostatnĂ„â€ş vyhodnocuj:
-- kdo je hlavnÄ‚Â­ osoba nebo subjekt
-- jakÄ‚Ë‡ je jeho role v dokumentu
-- kterÄ‚Â© identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje k nĂ„â€şmu patÄąâ„˘Ä‚Â­
-- kterÄ‚Â© z tĂ„â€şchto Ä‚ĹźdajÄąĹ» jsou relevantnÄ‚Â­ pro vÄ‚Ëťstup
+U Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­kĂ„Ä…ÄąÂ» Ă„Ä…Ă˘â€žËĂ„â€šĂ‚Â­zenĂ„â€šĂ‚Â­ vĂ„Ä…Ă„Äľdy samostatnÄ‚â€žĂ˘â‚¬Ĺź vyhodnocuj:
+- kdo je hlavnĂ„â€šĂ‚Â­ osoba nebo subjekt
+- jakĂ„â€šĂ‹â€ˇ je jeho role v dokumentu
+- kterĂ„â€šĂ‚Â© identifikaÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje k nÄ‚â€žĂ˘â‚¬Ĺźmu patĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­
+- kterĂ„â€šĂ‚Â© z tÄ‚â€žĂ˘â‚¬Ĺźchto Ă„â€šÄąĹşdajĂ„Ä…ÄąÂ» jsou relevantnĂ„â€šĂ‚Â­ pro vĂ„â€šĂ‹ĹĄstup
 
-Neber pouze prvnÄ‚Â­ nalezenÄ‚Ëť Ä‚Ĺźdaj. VÄąÄľdy zkontroluj, zda nejsou v dalÄąË‡Ä‚Â­ch Ă„Ĺ¤Ä‚Ë‡stech PDF uvedeny doplÄąÂujÄ‚Â­cÄ‚Â­ nebo pÄąâ„˘esnĂ„â€şjÄąË‡Ä‚Â­ identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje stejnÄ‚Â©ho Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ka.
+Neber pouze prvnĂ„â€šĂ‚Â­ nalezenĂ„â€šĂ‹ĹĄ Ă„â€šÄąĹşdaj. VĂ„Ä…Ă„Äľdy zkontroluj, zda nejsou v dalĂ„Ä…Ă‹â€ˇĂ„â€šĂ‚Â­ch Ä‚â€žÄąÂ¤Ă„â€šĂ‹â€ˇstech PDF uvedeny doplĂ„Ä…Ă‚ÂujĂ„â€šĂ‚Â­cĂ„â€šĂ‚Â­ nebo pĂ„Ä…Ă˘â€žËesnÄ‚â€žĂ˘â‚¬ĹźjĂ„Ä…Ă‹â€ˇĂ„â€šĂ‚Â­ identifikaÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje stejnĂ„â€šĂ‚Â©ho Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­ka.
 `;
 
 
 const PDF_IDENTITY_SPLIT_RULES = `
-### PRAVIDLO PRO ODDĂ„ĹˇLENÄ‚Ĺ¤ IDENTIFIKAĂ„ĹšNÄ‚Ĺ¤CH Ä‚ĹˇDAJÄąÂ® ODESÄ‚Ĺ¤LATELE
+### PRAVIDLO PRO ODDÄ‚â€žÄąË‡LENĂ„â€šÄąÂ¤ IDENTIFIKAÄ‚â€žÄąĹˇNĂ„â€šÄąÂ¤CH Ă„â€šÄąË‡DAJĂ„Ä…Ă‚Â® ODESĂ„â€šÄąÂ¤LATELE
 
-Pole senderName smÄ‚Â­ obsahovat pouze:
-- jmÄ‚Â©no a pÄąâ„˘Ä‚Â­jmenÄ‚Â­ fyzickÄ‚Â© osoby
-- nebo nÄ‚Ë‡zev prÄ‚Ë‡vnickÄ‚Â© osoby
+Pole senderName smĂ„â€šĂ‚Â­ obsahovat pouze:
+- jmĂ„â€šĂ‚Â©no a pĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­jmenĂ„â€šĂ‚Â­ fyzickĂ„â€šĂ‚Â© osoby
+- nebo nĂ„â€šĂ‹â€ˇzev prĂ„â€šĂ‹â€ˇvnickĂ„â€šĂ‚Â© osoby
 
-Do pole senderName nikdy nevklÄ‚Ë‡dej:
+Do pole senderName nikdy nevklĂ„â€šĂ‹â€ˇdej:
 - adresu
-- rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo
-- datum narozenÄ‚Â­
-- IĂ„ĹšO
-- datovou schrÄ‚Ë‡nku
+- rodnĂ„â€šĂ‚Â© Ä‚â€žÄąÂ¤Ă„â€šĂ‚Â­slo
+- datum narozenĂ„â€šĂ‚Â­
+- IÄ‚â€žÄąĹˇO
+- datovou schrĂ„â€šĂ‹â€ˇnku
 - e-mail
 - telefon
-- vÄ‚Â­ceÄąâ„˘Ä‚Ë‡dkovÄ‚Ëť identifikaĂ„Ĺ¤nÄ‚Â­ blok
+- vĂ„â€šĂ‚Â­ceĂ„Ä…Ă˘â€žËĂ„â€šĂ‹â€ˇdkovĂ„â€šĂ‹ĹĄ identifikaÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ blok
 
-Pole senderAddress smÄ‚Â­ obsahovat pouze adresu nebo doruĂ„Ĺ¤ovacÄ‚Â­ adresu odesÄ‚Â­latele.
+Pole senderAddress smĂ„â€šĂ‚Â­ obsahovat pouze adresu nebo doruÄ‚â€žÄąÂ¤ovacĂ„â€šĂ‚Â­ adresu odesĂ„â€šĂ‚Â­latele.
 
-Pokud PDF obsahuje identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje fyzickÄ‚Â© osoby, rozdĂ„â€şl je takto:
-- jmÄ‚Â©no a pÄąâ„˘Ä‚Â­jmenÄ‚Â­ -> senderName
+Pokud PDF obsahuje identifikaÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje fyzickĂ„â€šĂ‚Â© osoby, rozdÄ‚â€žĂ˘â‚¬Ĺźl je takto:
+- jmĂ„â€šĂ‚Â©no a pĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­jmenĂ„â€šĂ‚Â­ -> senderName
 - adresa -> senderAddress
-- datum narozenÄ‚Â­ -> senderBirthDate
-- rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo -> senderBirthNumber
+- datum narozenĂ„â€šĂ‚Â­ -> senderBirthDate
+- rodnĂ„â€šĂ‚Â© Ä‚â€žÄąÂ¤Ă„â€šĂ‚Â­slo -> senderBirthNumber
 
-Pokud PDF obsahuje identifikaĂ„Ĺ¤nÄ‚Â­ Ä‚Ĺźdaje prÄ‚Ë‡vnickÄ‚Â© osoby, rozdĂ„â€şl je takto:
-- nÄ‚Ë‡zev subjektu -> senderName
-- sÄ‚Â­dlo -> senderAddress
-- IĂ„ĹšO -> senderIco
+Pokud PDF obsahuje identifikaÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ Ă„â€šÄąĹşdaje prĂ„â€šĂ‹â€ˇvnickĂ„â€šĂ‚Â© osoby, rozdÄ‚â€žĂ˘â‚¬Ĺźl je takto:
+- nĂ„â€šĂ‹â€ˇzev subjektu -> senderName
+- sĂ„â€šĂ‚Â­dlo -> senderAddress
+- IÄ‚â€žÄąĹˇO -> senderIco
 
-Pokud nĂ„â€şkterÄ‚Ëť z tĂ„â€şchto Ä‚ĹźdajÄąĹ» nenÄ‚Â­ jistÄ‚Ëť, nehÄ‚Ë‡dej ho a vraÄąÄ„ prÄ‚Ë‡zdnÄ‚Ëť Äąâ„˘etĂ„â€şzec.
+Pokud nÄ‚â€žĂ˘â‚¬ĹźkterĂ„â€šĂ‹ĹĄ z tÄ‚â€žĂ˘â‚¬Ĺźchto Ă„â€šÄąĹşdajĂ„Ä…ÄąÂ» nenĂ„â€šĂ‚Â­ jistĂ„â€šĂ‹ĹĄ, nehĂ„â€šĂ‹â€ˇdej ho a vraĂ„Ä…Ă„â€ž prĂ„â€šĂ‹â€ˇzdnĂ„â€šĂ‹ĹĄ Ă„Ä…Ă˘â€žËetÄ‚â€žĂ˘â‚¬Ĺźzec.
 `;
 
 function normalizeText(value) {
@@ -227,12 +277,12 @@ function sanitizeSenderName(value) {
     .filter(Boolean)
     .filter((s) => {
       const lower = s.toLowerCase();
-      if (lower.includes("r. Ă„Ĺ¤")) return false;
-      if (lower.includes("rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo")) return false;
+      if (lower.includes("r. Ä‚â€žÄąÂ¤")) return false;
+      if (lower.includes("rodnĂ„â€šĂ‚Â© Ä‚â€žÄąÂ¤Ă„â€šĂ‚Â­slo")) return false;
       if (lower.includes("nar.")) return false;
       if (lower.includes("narozen")) return false;
-      if (lower.includes("datum narozenÄ‚Â­")) return false;
-      if (lower.includes("iĂ„Ĺ¤o")) return false;
+      if (lower.includes("datum narozenĂ„â€šĂ‚Â­")) return false;
+      if (lower.includes("iÄ‚â€žÄąÂ¤o")) return false;
       if (/\d{6}\/?\d{3,4}/.test(s)) return false;
       if (/\d/.test(s) && /\d{3}\s?\d{2}/.test(s) && /[A-Za-z]/.test(s)) return false;
       return true;
@@ -251,17 +301,17 @@ function sanitizeSenderAddress(value) {
     .filter(Boolean)
     .filter((s) => {
       const lower = s.toLowerCase();
-      if (lower.includes("r. Ă„Ĺ¤")) return false;
-      if (lower.includes("rodnÄ‚Â© Ă„Ĺ¤Ä‚Â­slo")) return false;
+      if (lower.includes("r. Ä‚â€žÄąÂ¤")) return false;
+      if (lower.includes("rodnĂ„â€šĂ‚Â© Ä‚â€žÄąÂ¤Ă„â€šĂ‚Â­slo")) return false;
       if (lower.includes("nar.")) return false;
       if (lower.includes("narozen")) return false;
-      if (lower.includes("datum narozenÄ‚Â­")) return false;
-      if (lower.includes("iĂ„Ĺ¤o")) return false;
-      if (lower.includes("datovÄ‚Ë‡ schrÄ‚Ë‡nka")) return false;
+      if (lower.includes("datum narozenĂ„â€šĂ‚Â­")) return false;
+      if (lower.includes("iÄ‚â€žÄąÂ¤o")) return false;
+      if (lower.includes("datovĂ„â€šĂ‹â€ˇ schrĂ„â€šĂ‹â€ˇnka")) return false;
       if (lower.includes("e-mail")) return false;
       if (lower.includes("telefon")) return false;
       if (/\d{6}\/?\d{3,4}/.test(s)) return false;
-      if (/^iĂ„Ĺ¤o[:\s]/i.test(s)) return false;
+      if (/^iÄ‚â€žÄąÂ¤o[:\s]/i.test(s)) return false;
       return true;
     })
     .join(", ")
@@ -308,6 +358,19 @@ function safeJsonParse(text) {
   return JSON.parse(cleaned);
 }
 
+function buildDocxFilenameFromTitle(title) {
+  const raw = normalizeText(title) || "listina";
+  const withoutDiacritics = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const safe = withoutDiacritics
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+  return `${safe || "listina"}.docx`;
+}
+
 function normalizeExekutorRecord(ex, idx) {
   const fullName = normalizeText(ex.jmeno_plne) || [ex.titul_pred, ex.jmeno, ex.prijmeni].filter(Boolean).join(" ").trim() || "Neuvedeno";
   const street = normalizeText(ex.adresa?.ulice);
@@ -351,7 +414,7 @@ function normalizeUnifiedRecord(item, idx) {
   if (!targetCat) return null;
 
   const nazev = normalizeText(item.nazev_subjektu) || "Neuvedeno";
-  const mesto = normalizeText(item.nejblizsi_fyzicka_pobocka) || normalizeText(item.kraj) || normalizeText(item.adresa_pobocky) || "Ä‚ĹˇstÄąâ„˘edÄ‚Â­";
+  const mesto = normalizeText(item.nejblizsi_fyzicka_pobocka) || normalizeText(item.kraj) || normalizeText(item.adresa_pobocky) || "Ă„â€šÄąË‡stĂ„Ä…Ă˘â€žËedĂ„â€šĂ‚Â­";
   const adresa = normalizeText(item.adresa_pobocky) || normalizeText(item.nejblizsi_fyzicka_pobocka) || normalizeText(item.kraj) || "Neuvedeno";
   const ds = normalizeText(item.datova_schranka) || "---";
   const tel = normalizeText(item.telefon) || "---";
@@ -393,14 +456,14 @@ function normalizeContactsFromJson(parsed) {
     return out;
   }
 
-  throw new Error("NepodporovanÄ‚Ëť formÄ‚Ë‡t JSON.");
+  throw new Error("NepodporovanĂ„â€šĂ‹ĹĄ formĂ„â€šĂ‹â€ˇt JSON.");
 }
 
 function loadContactsFromFiles() {
   let loadedFiles = 0;
   for (const filePath of DATA_FILES) {
     if (!fs.existsSync(filePath)) {
-      console.log(`VÄ‚ËťchozÄ‚Â­ soubor nebyl nalezen: ${path.basename(filePath)}`);
+      console.log(`VĂ„â€šĂ‹ĹĄchozĂ„â€šĂ‚Â­ soubor nebyl nalezen: ${path.basename(filePath)}`);
       continue;
     }
 
@@ -411,13 +474,13 @@ function loadContactsFromFiles() {
       mergeContacts(imported);
       loadedFiles += 1;
       const importedCount = Object.values(imported).reduce((sum, arr) => sum + arr.length, 0);
-      console.log(`NaĂ„Ĺ¤ten soubor ${path.basename(filePath)}: ${importedCount} zÄ‚Ë‡znamÄąĹ»`);
+      console.log(`NaÄ‚â€žÄąÂ¤ten soubor ${path.basename(filePath)}: ${importedCount} zĂ„â€šĂ‹â€ˇznamĂ„Ä…ÄąÂ»`);
     } catch (error) {
-      console.error(`Chyba pÄąâ„˘i naĂ„Ĺ¤Ä‚Â­tÄ‚Ë‡nÄ‚Â­ ${path.basename(filePath)}: ${error.message}`);
+      console.error(`Chyba pĂ„Ä…Ă˘â€žËi naÄ‚â€žÄąÂ¤Ă„â€šĂ‚Â­tĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­ ${path.basename(filePath)}: ${error.message}`);
     }
   }
-  console.log(`VÄ‚ËťchozÄ‚Â­ soubory naĂ„Ĺ¤teny: ${loadedFiles}/${DATA_FILES.length}`);
-  console.log(`Celkem kontaktÄąĹ» po startu: ${countAllContacts()}`);
+  console.log(`VĂ„â€šĂ‹ĹĄchozĂ„â€šĂ‚Â­ soubory naÄ‚â€žÄąÂ¤teny: ${loadedFiles}/${DATA_FILES.length}`);
+  console.log(`Celkem kontaktĂ„Ä…ÄąÂ» po startu: ${countAllContacts()}`);
 }
 
 async function postToGemini(body) {
@@ -429,9 +492,9 @@ async function postToGemini(body) {
   });
 
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || "NeznÄ‚Ë‡mÄ‚Ë‡ chyba AI sluÄąÄľby.");
+  if (!response.ok) throw new Error(data?.error?.message || "NeznĂ„â€šĂ‹â€ˇmĂ„â€šĂ‹â€ˇ chyba AI sluĂ„Ä…Ă„Äľby.");
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("AI nevrÄ‚Ë‡tila ÄąÄľÄ‚Ë‡dnÄ‚Ëť obsah.");
+  if (!text) throw new Error("AI nevrĂ„â€šĂ‹â€ˇtila Ă„Ä…Ă„ÄľĂ„â€šĂ‹â€ˇdnĂ„â€šĂ‹ĹĄ obsah.");
   return safeJsonParse(text);
 }
 
@@ -439,69 +502,69 @@ async function postToGemini(body) {
 
 function detectDocumentType(prompt = "", aiContext = "") {
   const text = `${normalizeText(prompt)} ${normalizeText(aiContext)}`.toLowerCase();
-  if (text.includes("splÄ‚Ë‡tkovÄ‚Ëť kalendÄ‚Ë‡Äąâ„˘") || text.includes("splatkovy kalendar")) return "installment";
-  if (text.includes("zastavenÄ‚Â­ exekuce") || text.includes("zastaveni exekuce")) return "stop_execution";
-  if (text.includes("odklad exekuce") || text.includes("odklad vÄ‚Ëťkonu") || text.includes("odklad vykonu")) return "postponement";
-  if (text.includes("souĂ„Ĺ¤innost") || text.includes("soucinnost")) return "cooperation";
-  if (text.includes("vyÄąË‡krtnutÄ‚Â­ ze soupisu") || text.includes("vyÄąË‡krtnuti ze soupisu")) return "exclusion";
-  if (text.includes("slouĂ„Ĺ¤enÄ‚Â­ exekucÄ‚Â­") || text.includes("slouceni exekuci")) return "merge_executions";
-  if (text.includes("vyluĂ„Ĺ¤ovacÄ‚Â­ ÄąÄľaloba") || text.includes("vylucovaci zaloba")) return "exclusion_lawsuit";
-  if (text.includes("pÄąâ„˘eruÄąË‡enÄ‚Â­ oddluÄąÄľenÄ‚Â­") || text.includes("preruseni oddluzeni")) return "debt_relief_pause";
-  if (text.includes("odpor proti platebnÄ‚Â­mu rozkazu") || text.includes("odpor proti platebnimu rozkazu")) return "payment_order_opposition";
+  if (text.includes("splĂ„â€šĂ‹â€ˇtkovĂ„â€šĂ‹ĹĄ kalendĂ„â€šĂ‹â€ˇĂ„Ä…Ă˘â€žË") || text.includes("splatkovy kalendar")) return "installment";
+  if (text.includes("zastavenĂ„â€šĂ‚Â­ exekuce") || text.includes("zastaveni exekuce")) return "stop_execution";
+  if (text.includes("odklad exekuce") || text.includes("odklad vĂ„â€šĂ‹ĹĄkonu") || text.includes("odklad vykonu")) return "postponement";
+  if (text.includes("souÄ‚â€žÄąÂ¤innost") || text.includes("soucinnost")) return "cooperation";
+  if (text.includes("vyĂ„Ä…Ă‹â€ˇkrtnutĂ„â€šĂ‚Â­ ze soupisu") || text.includes("vyĂ„Ä…Ă‹â€ˇkrtnuti ze soupisu")) return "exclusion";
+  if (text.includes("slouÄ‚â€žÄąÂ¤enĂ„â€šĂ‚Â­ exekucĂ„â€šĂ‚Â­") || text.includes("slouceni exekuci")) return "merge_executions";
+  if (text.includes("vyluÄ‚â€žÄąÂ¤ovacĂ„â€šĂ‚Â­ Ă„Ä…Ă„Äľaloba") || text.includes("vylucovaci zaloba")) return "exclusion_lawsuit";
+  if (text.includes("pĂ„Ä…Ă˘â€žËeruĂ„Ä…Ă‹â€ˇenĂ„â€šĂ‚Â­ oddluĂ„Ä…Ă„ÄľenĂ„â€šĂ‚Â­") || text.includes("preruseni oddluzeni")) return "debt_relief_pause";
+  if (text.includes("odpor proti platebnĂ„â€šĂ‚Â­mu rozkazu") || text.includes("odpor proti platebnimu rozkazu")) return "payment_order_opposition";
   return "generic";
 }
 
 function getDocumentProfile(type) {
   const profiles = {
     installment: {
-      label: "NÄ‚ÂVRH SPLÄ‚ÂTKOVÄ‚â€°HO KALENDÄ‚ÂÄąÂE",
-      system: "Jde o nÄ‚Ë‡vrh dobrovolnÄ‚Â©ho splÄ‚Ë‡tkovÄ‚Â©ho kalendÄ‚Ë‡Äąâ„˘e adresovanÄ‚Ëť vĂ„â€şÄąâ„˘iteli nebo instituci. Nejde o soudnÄ‚Â­ ÄąÄľalobu ani procesnÄ‚Â­ nÄ‚Ë‡vrh. PiÄąË‡ smÄ‚Â­rnĂ„â€ş, vĂ„â€şcnĂ„â€ş a prakticky. NenazÄ‚Ëťvej text uznÄ‚Ë‡nÄ‚Â­m dluhu, pokud to vÄ‚ËťslovnĂ„â€ş neplyne z kontextu.",
-      user: "UveĂ„Ĺą realistickÄ‚Ëť nÄ‚Ë‡vrh splÄ‚Ë‡cenÄ‚Â­, dÄąĹ»vod ÄąÄľÄ‚Ë‡dosti a zdÄąĹ»razni snahu o dobrovolnÄ‚Â© Äąâ„˘eÄąË‡enÄ‚Â­ zÄ‚Ë‡vazku."
+      label: "NĂ„â€šĂ‚ÂVRH SPLĂ„â€šĂ‚ÂTKOVĂ„â€šĂ˘â‚¬Â°HO KALENDĂ„â€šĂ‚ÂĂ„Ä…Ă‚ÂE",
+      system: "Jde o nĂ„â€šĂ‹â€ˇvrh dobrovolnĂ„â€šĂ‚Â©ho splĂ„â€šĂ‹â€ˇtkovĂ„â€šĂ‚Â©ho kalendĂ„â€šĂ‹â€ˇĂ„Ä…Ă˘â€žËe adresovanĂ„â€šĂ‹ĹĄ vÄ‚â€žĂ˘â‚¬ĹźĂ„Ä…Ă˘â€žËiteli nebo instituci. Nejde o soudnĂ„â€šĂ‚Â­ Ă„Ä…Ă„Äľalobu ani procesnĂ„â€šĂ‚Â­ nĂ„â€šĂ‹â€ˇvrh. PiĂ„Ä…Ă‹â€ˇ smĂ„â€šĂ‚Â­rnÄ‚â€žĂ˘â‚¬Ĺź, vÄ‚â€žĂ˘â‚¬ĹźcnÄ‚â€žĂ˘â‚¬Ĺź a prakticky. NenazĂ„â€šĂ‹ĹĄvej text uznĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­m dluhu, pokud to vĂ„â€šĂ‹ĹĄslovnÄ‚â€žĂ˘â‚¬Ĺź neplyne z kontextu.",
+      user: "UveÄ‚â€žÄąÄ… realistickĂ„â€šĂ‹ĹĄ nĂ„â€šĂ‹â€ˇvrh splĂ„â€šĂ‹â€ˇcenĂ„â€šĂ‚Â­, dĂ„Ä…ÄąÂ»vod Ă„Ä…Ă„ÄľĂ„â€šĂ‹â€ˇdosti a zdĂ„Ä…ÄąÂ»razni snahu o dobrovolnĂ„â€šĂ‚Â© Ă„Ä…Ă˘â€žËeĂ„Ä…Ă‹â€ˇenĂ„â€šĂ‚Â­ zĂ„â€šĂ‹â€ˇvazku."
     },
     stop_execution: {
-      label: "NÄ‚ÂVRH NA ZASTAVENÄ‚Ĺ¤ EXEKUCE",
-      system: "Jde o procesnÄ‚Â­ nÄ‚Ë‡vrh na zastavenÄ‚Â­ exekuce. Text musÄ‚Â­ mÄ‚Â­t styl formÄ‚Ë‡lnÄ‚Â­ho procesnÄ‚Â­ho podÄ‚Ë‡nÄ‚Â­. V zÄ‚Ë‡vĂ„â€şru musÄ‚Â­ bÄ‚Ëťt jasnÄ‚Ëť nÄ‚Ë‡vrh, aby exekuce byla zastavena v uvedenÄ‚Â©m rozsahu. Pracuj pÄąâ„˘esnĂ„â€ş se skutkovÄ‚Ëťmi tvrzenÄ‚Â­mi, dÄąĹ»vody a dÄąĹ»kazy uvedenÄ‚Ëťmi v kontextu.",
-      user: "Zachovej procesnÄ‚Â­ styl a oddĂ„â€şl skutkovÄ‚Ëť stav, prÄ‚Ë‡vnÄ‚Â­ dÄąĹ»vody, dÄąĹ»kazy a nÄ‚Ë‡vrh vÄ‚Ëťroku."
+      label: "NĂ„â€šĂ‚ÂVRH NA ZASTAVENĂ„â€šÄąÂ¤ EXEKUCE",
+      system: "Jde o procesnĂ„â€šĂ‚Â­ nĂ„â€šĂ‹â€ˇvrh na zastavenĂ„â€šĂ‚Â­ exekuce. Text musĂ„â€šĂ‚Â­ mĂ„â€šĂ‚Â­t styl formĂ„â€šĂ‹â€ˇlnĂ„â€šĂ‚Â­ho procesnĂ„â€šĂ‚Â­ho podĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­. V zĂ„â€šĂ‹â€ˇvÄ‚â€žĂ˘â‚¬Ĺźru musĂ„â€šĂ‚Â­ bĂ„â€šĂ‹ĹĄt jasnĂ„â€šĂ‹ĹĄ nĂ„â€šĂ‹â€ˇvrh, aby exekuce byla zastavena v uvedenĂ„â€šĂ‚Â©m rozsahu. Pracuj pĂ„Ä…Ă˘â€žËesnÄ‚â€žĂ˘â‚¬Ĺź se skutkovĂ„â€šĂ‹ĹĄmi tvrzenĂ„â€šĂ‚Â­mi, dĂ„Ä…ÄąÂ»vody a dĂ„Ä…ÄąÂ»kazy uvedenĂ„â€šĂ‹ĹĄmi v kontextu.",
+      user: "Zachovej procesnĂ„â€šĂ‚Â­ styl a oddÄ‚â€žĂ˘â‚¬Ĺźl skutkovĂ„â€šĂ‹ĹĄ stav, prĂ„â€šĂ‹â€ˇvnĂ„â€šĂ‚Â­ dĂ„Ä…ÄąÂ»vody, dĂ„Ä…ÄąÂ»kazy a nĂ„â€šĂ‹â€ˇvrh vĂ„â€šĂ‹ĹĄroku."
     },
     postponement: {
-      label: "ÄąËťÄ‚ÂDOST O ODKLAD EXEKUCE",
-      system: "Jde o ÄąÄľÄ‚Ë‡dost o odklad exekuce. Nejde o zastavenÄ‚Â­ exekuce ani o ÄąÄľalobu. ZdÄąĹ»razni doĂ„Ĺ¤asnost pÄąâ„˘ekÄ‚Ë‡ÄąÄľek, pÄąâ„˘imĂ„â€şÄąâ„˘enost odkladu a oĂ„Ĺ¤ekÄ‚Ë‡vanÄ‚Â© obnovenÄ‚Â­ plnĂ„â€şnÄ‚Â­ nebo jinÄ‚Â© Äąâ„˘eÄąË‡enÄ‚Â­.",
-      user: "PopiÄąË‡ konkrÄ‚Â©tnÄ‚Â­ dÄąĹ»vody odkladu, navrÄąÄľenou dobu a oĂ„Ĺ¤ekÄ‚Ë‡vanÄ‚Ëť dalÄąË‡Ä‚Â­ vÄ‚Ëťvoj."
+      label: "Ă„Ä…Ă‹ĹĄĂ„â€šĂ‚ÂDOST O ODKLAD EXEKUCE",
+      system: "Jde o Ă„Ä…Ă„ÄľĂ„â€šĂ‹â€ˇdost o odklad exekuce. Nejde o zastavenĂ„â€šĂ‚Â­ exekuce ani o Ă„Ä…Ă„Äľalobu. ZdĂ„Ä…ÄąÂ»razni doÄ‚â€žÄąÂ¤asnost pĂ„Ä…Ă˘â€žËekĂ„â€šĂ‹â€ˇĂ„Ä…Ă„Äľek, pĂ„Ä…Ă˘â€žËimÄ‚â€žĂ˘â‚¬ĹźĂ„Ä…Ă˘â€žËenost odkladu a oÄ‚â€žÄąÂ¤ekĂ„â€šĂ‹â€ˇvanĂ„â€šĂ‚Â© obnovenĂ„â€šĂ‚Â­ plnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‚Â­ nebo jinĂ„â€šĂ‚Â© Ă„Ä…Ă˘â€žËeĂ„Ä…Ă‹â€ˇenĂ„â€šĂ‚Â­.",
+      user: "PopiĂ„Ä…Ă‹â€ˇ konkrĂ„â€šĂ‚Â©tnĂ„â€šĂ‚Â­ dĂ„Ä…ÄąÂ»vody odkladu, navrĂ„Ä…Ă„Äľenou dobu a oÄ‚â€žÄąÂ¤ekĂ„â€šĂ‹â€ˇvanĂ„â€šĂ‹ĹĄ dalĂ„Ä…Ă‹â€ˇĂ„â€šĂ‚Â­ vĂ„â€šĂ‹ĹĄvoj."
     },
     cooperation: {
-      label: "ÄąËťÄ‚ÂDOST O SOUĂ„ĹšINNOST",
-      system: "Jde o ÄąÄľÄ‚Ë‡dost o souĂ„Ĺ¤innost nebo poskytnutÄ‚Â­ informacÄ‚Â­ Ă„Ĺ¤i listin. Nejde o ÄąÄľalobu ani o nÄ‚Ë‡vrh na soudnÄ‚Â­ rozhodnutÄ‚Â­. Text mÄ‚Ë‡ bÄ‚Ëťt struĂ„Ĺ¤nÄ‚Ëť, vĂ„â€şcnÄ‚Ëť a pÄąâ„˘esnĂ„â€ş popsat, jakou souĂ„Ĺ¤innost mÄ‚Ë‡ adresÄ‚Ë‡t poskytnout.",
-      user: "UveĂ„Ĺą pÄąâ„˘esnĂ„â€ş, co se ÄąÄľÄ‚Ë‡dÄ‚Ë‡, proĂ„Ĺ¤ je to potÄąâ„˘ebnÄ‚Â© a v jakÄ‚Â© pÄąâ„˘imĂ„â€şÄąâ„˘enÄ‚Â© lhÄąĹ»tĂ„â€ş mÄ‚Ë‡ bÄ‚Ëťt souĂ„Ĺ¤innost poskytnuta."
+      label: "Ă„Ä…Ă‹ĹĄĂ„â€šĂ‚ÂDOST O SOUÄ‚â€žÄąĹˇINNOST",
+      system: "Jde o Ă„Ä…Ă„ÄľĂ„â€šĂ‹â€ˇdost o souÄ‚â€žÄąÂ¤innost nebo poskytnutĂ„â€šĂ‚Â­ informacĂ„â€šĂ‚Â­ Ä‚â€žÄąÂ¤i listin. Nejde o Ă„Ä…Ă„Äľalobu ani o nĂ„â€šĂ‹â€ˇvrh na soudnĂ„â€šĂ‚Â­ rozhodnutĂ„â€šĂ‚Â­. Text mĂ„â€šĂ‹â€ˇ bĂ„â€šĂ‹ĹĄt struÄ‚â€žÄąÂ¤nĂ„â€šĂ‹ĹĄ, vÄ‚â€žĂ˘â‚¬ĹźcnĂ„â€šĂ‹ĹĄ a pĂ„Ä…Ă˘â€žËesnÄ‚â€žĂ˘â‚¬Ĺź popsat, jakou souÄ‚â€žÄąÂ¤innost mĂ„â€šĂ‹â€ˇ adresĂ„â€šĂ‹â€ˇt poskytnout.",
+      user: "UveÄ‚â€žÄąÄ… pĂ„Ä…Ă˘â€žËesnÄ‚â€žĂ˘â‚¬Ĺź, co se Ă„Ä…Ă„ÄľĂ„â€šĂ‹â€ˇdĂ„â€šĂ‹â€ˇ, proÄ‚â€žÄąÂ¤ je to potĂ„Ä…Ă˘â€žËebnĂ„â€šĂ‚Â© a v jakĂ„â€šĂ‚Â© pĂ„Ä…Ă˘â€žËimÄ‚â€žĂ˘â‚¬ĹźĂ„Ä…Ă˘â€žËenĂ„â€šĂ‚Â© lhĂ„Ä…ÄąÂ»tÄ‚â€žĂ˘â‚¬Ĺź mĂ„â€šĂ‹â€ˇ bĂ„â€šĂ‹ĹĄt souÄ‚â€žÄąÂ¤innost poskytnuta."
     },
     exclusion: {
-      label: "NÄ‚ÂVRH NA VYÄąÂ KRTNUTÄ‚Ĺ¤ VĂ„ĹˇCI ZE SOUPISU EXEKUCE",
-      system: "Jde o nÄ‚Ë‡vrh na vyÄąË‡krtnutÄ‚Â­ vĂ„â€şci ze soupisu exekuce. DÄąĹ»raz dej na tvrzenÄ‚Â­ o vlastnictvÄ‚Â­ tÄąâ„˘etÄ‚Â­ osoby nebo jinÄ‚Â©m prÄ‚Ë‡vu vyluĂ„Ĺ¤ujÄ‚Â­cÄ‚Â­m soupis. UveĂ„Ĺą popis vĂ„â€şci, dÄąĹ»vody, dÄąĹ»kazy a jasnÄ‚Ëť nÄ‚Ë‡vrh na vyÄąË‡krtnutÄ‚Â­.",
-      user: "ZdÄąĹ»razni vlastnickÄ‚Â© prÄ‚Ë‡vo, identifikaci vĂ„â€şci a dÄąĹ»kazy, kterÄ‚Â© vlastnictvÄ‚Â­ podporujÄ‚Â­."
+      label: "NĂ„â€šĂ‚ÂVRH NA VYĂ„Ä…Ă‚Â KRTNUTĂ„â€šÄąÂ¤ VÄ‚â€žÄąË‡CI ZE SOUPISU EXEKUCE",
+      system: "Jde o nĂ„â€šĂ‹â€ˇvrh na vyĂ„Ä…Ă‹â€ˇkrtnutĂ„â€šĂ‚Â­ vÄ‚â€žĂ˘â‚¬Ĺźci ze soupisu exekuce. DĂ„Ä…ÄąÂ»raz dej na tvrzenĂ„â€šĂ‚Â­ o vlastnictvĂ„â€šĂ‚Â­ tĂ„Ä…Ă˘â€žËetĂ„â€šĂ‚Â­ osoby nebo jinĂ„â€šĂ‚Â©m prĂ„â€šĂ‹â€ˇvu vyluÄ‚â€žÄąÂ¤ujĂ„â€šĂ‚Â­cĂ„â€šĂ‚Â­m soupis. UveÄ‚â€žÄąÄ… popis vÄ‚â€žĂ˘â‚¬Ĺźci, dĂ„Ä…ÄąÂ»vody, dĂ„Ä…ÄąÂ»kazy a jasnĂ„â€šĂ‹ĹĄ nĂ„â€šĂ‹â€ˇvrh na vyĂ„Ä…Ă‹â€ˇkrtnutĂ„â€šĂ‚Â­.",
+      user: "ZdĂ„Ä…ÄąÂ»razni vlastnickĂ„â€šĂ‚Â© prĂ„â€šĂ‹â€ˇvo, identifikaci vÄ‚â€žĂ˘â‚¬Ĺźci a dĂ„Ä…ÄąÂ»kazy, kterĂ„â€šĂ‚Â© vlastnictvĂ„â€šĂ‚Â­ podporujĂ„â€šĂ‚Â­."
     },
     merge_executions: {
-      label: "NÄ‚ÂVRH NA SLOUĂ„ĹšENÄ‚Ĺ¤ EXEKUCÄ‚Ĺ¤",
-      system: "Jde o nÄ‚Ë‡vrh na spojenÄ‚Â­ nebo slouĂ„Ĺ¤enÄ‚Â­ exekuĂ„Ĺ¤nÄ‚Â­ch Äąâ„˘Ä‚Â­zenÄ‚Â­. Text mÄ‚Ë‡ bÄ‚Ëťt procesnÄ‚Â­, pÄąâ„˘ehlednÄ‚Ëť a musÄ‚Â­ vysvĂ„â€ştlit, proĂ„Ĺ¤ je spojenÄ‚Â­ Ä‚ĹźĂ„Ĺ¤elnÄ‚Â© a hospodÄ‚Ë‡rnÄ‚Â©. V zÄ‚Ë‡vĂ„â€şru formuluj jasnÄ‚Ëť nÄ‚Ë‡vrh na spojenÄ‚Â­ Äąâ„˘Ä‚Â­zenÄ‚Â­.",
-      user: "ZvÄ‚Ëťrazni spoleĂ„Ĺ¤nÄ‚Â©ho oprÄ‚Ë‡vnĂ„â€şnÄ‚Â©ho, totoÄąÄľnost Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­kÄąĹ», pÄąâ„˘ehled Äąâ„˘Ä‚Â­zenÄ‚Â­ a dÄąĹ»vody hospodÄ‚Ë‡rnosti."
+      label: "NĂ„â€šĂ‚ÂVRH NA SLOUÄ‚â€žÄąĹˇENĂ„â€šÄąÂ¤ EXEKUCĂ„â€šÄąÂ¤",
+      system: "Jde o nĂ„â€šĂ‹â€ˇvrh na spojenĂ„â€šĂ‚Â­ nebo slouÄ‚â€žÄąÂ¤enĂ„â€šĂ‚Â­ exekuÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ch Ă„Ä…Ă˘â€žËĂ„â€šĂ‚Â­zenĂ„â€šĂ‚Â­. Text mĂ„â€šĂ‹â€ˇ bĂ„â€šĂ‹ĹĄt procesnĂ„â€šĂ‚Â­, pĂ„Ä…Ă˘â€žËehlednĂ„â€šĂ‹ĹĄ a musĂ„â€šĂ‚Â­ vysvÄ‚â€žĂ˘â‚¬Ĺźtlit, proÄ‚â€žÄąÂ¤ je spojenĂ„â€šĂ‚Â­ Ă„â€šÄąĹşÄ‚â€žÄąÂ¤elnĂ„â€šĂ‚Â© a hospodĂ„â€šĂ‹â€ˇrnĂ„â€šĂ‚Â©. V zĂ„â€šĂ‹â€ˇvÄ‚â€žĂ˘â‚¬Ĺźru formuluj jasnĂ„â€šĂ‹ĹĄ nĂ„â€šĂ‹â€ˇvrh na spojenĂ„â€šĂ‚Â­ Ă„Ä…Ă˘â€žËĂ„â€šĂ‚Â­zenĂ„â€šĂ‚Â­.",
+      user: "ZvĂ„â€šĂ‹ĹĄrazni spoleÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â©ho oprĂ„â€šĂ‹â€ˇvnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‚Â©ho, totoĂ„Ä…Ă„Äľnost Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­kĂ„Ä…ÄąÂ», pĂ„Ä…Ă˘â€žËehled Ă„Ä…Ă˘â€žËĂ„â€šĂ‚Â­zenĂ„â€šĂ‚Â­ a dĂ„Ä…ÄąÂ»vody hospodĂ„â€šĂ‹â€ˇrnosti."
     },
     exclusion_lawsuit: {
-      label: "VYLUĂ„ĹšOVACÄ‚Ĺ¤ ÄąËťALOBA",
-      system: "Jde o vyluĂ„Ĺ¤ovacÄ‚Â­ ÄąÄľalobu podÄ‚Ë‡vanou k soudu. Text musÄ‚Â­ mÄ‚Â­t procesnÄ‚Â­ soudnÄ‚Â­ styl a zÄąâ„˘etelnĂ„â€ş oddĂ„â€şlenÄ‚Â© Ä‚ĹźĂ„Ĺ¤astnÄ‚Â­ky, skutkovÄ‚Ëť stav, dÄąĹ»kazy a ÄąÄľalobnÄ‚Â­ nÄ‚Ë‡vrh. Nejde o pouhou ÄąÄľÄ‚Ë‡dost ani dopis exekutorovi.",
-      user: "V zÄ‚Ë‡vĂ„â€şru uveĂ„Ĺą ÄąÄľalobnÄ‚Â­ petit smĂ„â€şÄąâ„˘ujÄ‚Â­cÄ‚Â­ k vylouĂ„Ĺ¤enÄ‚Â­ vĂ„â€şci z exekuce a pÄąâ„˘Ä‚Â­padnĂ„â€ş i nÄ‚Ë‡vrh na nÄ‚Ë‡hradu nÄ‚Ë‡kladÄąĹ»."
+      label: "VYLUÄ‚â€žÄąĹˇOVACĂ„â€šÄąÂ¤ Ă„Ä…Ă‹ĹĄALOBA",
+      system: "Jde o vyluÄ‚â€žÄąÂ¤ovacĂ„â€šĂ‚Â­ Ă„Ä…Ă„Äľalobu podĂ„â€šĂ‹â€ˇvanou k soudu. Text musĂ„â€šĂ‚Â­ mĂ„â€šĂ‚Â­t procesnĂ„â€šĂ‚Â­ soudnĂ„â€šĂ‚Â­ styl a zĂ„Ä…Ă˘â€žËetelnÄ‚â€žĂ˘â‚¬Ĺź oddÄ‚â€žĂ˘â‚¬ĹźlenĂ„â€šĂ‚Â© Ă„â€šÄąĹşÄ‚â€žÄąÂ¤astnĂ„â€šĂ‚Â­ky, skutkovĂ„â€šĂ‹ĹĄ stav, dĂ„Ä…ÄąÂ»kazy a Ă„Ä…Ă„ÄľalobnĂ„â€šĂ‚Â­ nĂ„â€šĂ‹â€ˇvrh. Nejde o pouhou Ă„Ä…Ă„ÄľĂ„â€šĂ‹â€ˇdost ani dopis exekutorovi.",
+      user: "V zĂ„â€šĂ‹â€ˇvÄ‚â€žĂ˘â‚¬Ĺźru uveÄ‚â€žÄąÄ… Ă„Ä…Ă„ÄľalobnĂ„â€šĂ‚Â­ petit smÄ‚â€žĂ˘â‚¬ĹźĂ„Ä…Ă˘â€žËujĂ„â€šĂ‚Â­cĂ„â€šĂ‚Â­ k vylouÄ‚â€žÄąÂ¤enĂ„â€šĂ‚Â­ vÄ‚â€žĂ˘â‚¬Ĺźci z exekuce a pĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­padnÄ‚â€žĂ˘â‚¬Ĺź i nĂ„â€šĂ‹â€ˇvrh na nĂ„â€šĂ‹â€ˇhradu nĂ„â€šĂ‹â€ˇkladĂ„Ä…ÄąÂ»."
     },
     debt_relief_pause: {
-      label: "ÄąËťÄ‚ÂDOST O PÄąÂERUÄąÂ ENÄ‚Ĺ¤ ODDLUÄąËťENÄ‚Ĺ¤",
-      system: "Jde o ÄąÄľÄ‚Ë‡dost v insolvenĂ„Ĺ¤nÄ‚Â­ vĂ„â€şci o pÄąâ„˘eruÄąË‡enÄ‚Â­ oddluÄąÄľenÄ‚Â­. Nejde o exekuĂ„Ĺ¤nÄ‚Â­ podÄ‚Ë‡nÄ‚Â­. Text mÄ‚Ë‡ zdÄąĹ»raznit doĂ„Ĺ¤asnÄ‚Â© pÄąâ„˘ekÄ‚Ë‡ÄąÄľky plnĂ„â€şnÄ‚Â­, jejich zÄ‚Ë‡vaÄąÄľnost a oĂ„Ĺ¤ekÄ‚Ë‡vanÄ‚Â© obnovenÄ‚Â­ Äąâ„˘Ä‚Ë‡dnÄ‚Â©ho plnĂ„â€şnÄ‚Â­.",
-      user: "UveĂ„Ĺą dÄąĹ»vody pÄąâ„˘eruÄąË‡enÄ‚Â­, navrÄąÄľenou dobu a informaci, jak a kdy se mÄ‚Ë‡ obnovit plnĂ„â€şnÄ‚Â­ povinnostÄ‚Â­."
+      label: "Ă„Ä…Ă‹ĹĄĂ„â€šĂ‚ÂDOST O PĂ„Ä…Ă‚ÂERUĂ„Ä…Ă‚Â ENĂ„â€šÄąÂ¤ ODDLUĂ„Ä…Ă‹ĹĄENĂ„â€šÄąÂ¤",
+      system: "Jde o Ă„Ä…Ă„ÄľĂ„â€šĂ‹â€ˇdost v insolvenÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ vÄ‚â€žĂ˘â‚¬Ĺźci o pĂ„Ä…Ă˘â€žËeruĂ„Ä…Ă‹â€ˇenĂ„â€šĂ‚Â­ oddluĂ„Ä…Ă„ÄľenĂ„â€šĂ‚Â­. Nejde o exekuÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ podĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­. Text mĂ„â€šĂ‹â€ˇ zdĂ„Ä…ÄąÂ»raznit doÄ‚â€žÄąÂ¤asnĂ„â€šĂ‚Â© pĂ„Ä…Ă˘â€žËekĂ„â€šĂ‹â€ˇĂ„Ä…Ă„Äľky plnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‚Â­, jejich zĂ„â€šĂ‹â€ˇvaĂ„Ä…Ă„Äľnost a oÄ‚â€žÄąÂ¤ekĂ„â€šĂ‹â€ˇvanĂ„â€šĂ‚Â© obnovenĂ„â€šĂ‚Â­ Ă„Ä…Ă˘â€žËĂ„â€šĂ‹â€ˇdnĂ„â€šĂ‚Â©ho plnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‚Â­.",
+      user: "UveÄ‚â€žÄąÄ… dĂ„Ä…ÄąÂ»vody pĂ„Ä…Ă˘â€žËeruĂ„Ä…Ă‹â€ˇenĂ„â€šĂ‚Â­, navrĂ„Ä…Ă„Äľenou dobu a informaci, jak a kdy se mĂ„â€šĂ‹â€ˇ obnovit plnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‚Â­ povinnostĂ„â€šĂ‚Â­."
     },
     payment_order_opposition: {
-      label: "ODPOR PROTI PLATEBNÄ‚Ĺ¤MU ROZKAZU",
-      system: "Jde o procesnÄ‚Â­ odpor proti platebnÄ‚Â­mu rozkazu. Text mÄ‚Ë‡ mÄ‚Â­t procesnÄ‚Â­ charakter a musÄ‚Â­ jasnĂ„â€ş uvÄ‚Â©st, ÄąÄľe je podÄ‚Ë‡vÄ‚Ë‡n v zÄ‚Ë‡konnÄ‚Â© lhÄąĹ»tĂ„â€ş. Nejde o odvolÄ‚Ë‡nÄ‚Â­ ani obecnou nÄ‚Ë‡mitku.",
-      user: "ZdÄąĹ»razni, ÄąÄľe jde o odpor, uveĂ„Ĺą identifikaci rozhodnutÄ‚Â­ a struĂ„Ĺ¤nÄ‚Â©, ale konkrÄ‚Â©tnÄ‚Â­ odÄąĹ»vodnĂ„â€şnÄ‚Â­, pokud je v kontextu k dispozici."
+      label: "ODPOR PROTI PLATEBNĂ„â€šÄąÂ¤MU ROZKAZU",
+      system: "Jde o procesnĂ„â€šĂ‚Â­ odpor proti platebnĂ„â€šĂ‚Â­mu rozkazu. Text mĂ„â€šĂ‹â€ˇ mĂ„â€šĂ‚Â­t procesnĂ„â€šĂ‚Â­ charakter a musĂ„â€šĂ‚Â­ jasnÄ‚â€žĂ˘â‚¬Ĺź uvĂ„â€šĂ‚Â©st, Ă„Ä…Ă„Äľe je podĂ„â€šĂ‹â€ˇvĂ„â€šĂ‹â€ˇn v zĂ„â€šĂ‹â€ˇkonnĂ„â€šĂ‚Â© lhĂ„Ä…ÄąÂ»tÄ‚â€žĂ˘â‚¬Ĺź. Nejde o odvolĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­ ani obecnou nĂ„â€šĂ‹â€ˇmitku.",
+      user: "ZdĂ„Ä…ÄąÂ»razni, Ă„Ä…Ă„Äľe jde o odpor, uveÄ‚â€žÄąÄ… identifikaci rozhodnutĂ„â€šĂ‚Â­ a struÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â©, ale konkrĂ„â€šĂ‚Â©tnĂ„â€šĂ‚Â­ odĂ„Ä…ÄąÂ»vodnÄ‚â€žĂ˘â‚¬ĹźnĂ„â€šĂ‚Â­, pokud je v kontextu k dispozici."
     },
     generic: {
-      label: "Ä‚ĹˇÄąÂEDNÄ‚Ĺ¤ LISTINA",
-      system: "Jde o obecnou formÄ‚Ë‡lnÄ‚Â­ Ä‚ĹźÄąâ„˘ednÄ‚Â­ listinu. PiÄąË‡ vĂ„â€şcnĂ„â€ş, pÄąâ„˘ehlednĂ„â€ş a bez vymÄ‚ËťÄąË‡lenÄ‚Â­ skuteĂ„Ĺ¤nostÄ‚Â­.",
-      user: "PouÄąÄľij poskytnutÄ‚Ëť kontext a vytvoÄąâ„˘ logicky strukturovanÄ‚Â© podÄ‚Ë‡nÄ‚Â­ nebo dopis podle jeho obsahu."
+      label: "Ă„â€šÄąË‡Ă„Ä…Ă‚ÂEDNĂ„â€šÄąÂ¤ LISTINA",
+      system: "Jde o obecnou formĂ„â€šĂ‹â€ˇlnĂ„â€šĂ‚Â­ Ă„â€šÄąĹşĂ„Ä…Ă˘â€žËednĂ„â€šĂ‚Â­ listinu. PiĂ„Ä…Ă‹â€ˇ vÄ‚â€žĂ˘â‚¬ĹźcnÄ‚â€žĂ˘â‚¬Ĺź, pĂ„Ä…Ă˘â€žËehlednÄ‚â€žĂ˘â‚¬Ĺź a bez vymĂ„â€šĂ‹ĹĄĂ„Ä…Ă‹â€ˇlenĂ„â€šĂ‚Â­ skuteÄ‚â€žÄąÂ¤nostĂ„â€šĂ‚Â­.",
+      user: "PouĂ„Ä…Ă„Äľij poskytnutĂ„â€šĂ‹ĹĄ kontext a vytvoĂ„Ä…Ă˘â€žË logicky strukturovanĂ„â€šĂ‚Â© podĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­ nebo dopis podle jeho obsahu."
     }
   };
   return profiles[type] || profiles.generic;
@@ -512,29 +575,29 @@ async function callGemini({ prompt, aiContext, recipient, pdfBase64 }) {
   const profile = getDocumentProfile(documentType);
 
   const systemPrompt = [
-    "Jsi pÄąâ„˘esnÄ‚Ëť prÄ‚Ë‡vnÄ‚Â­ asistent.",
+    "Jsi pĂ„Ä…Ă˘â€žËesnĂ„â€šĂ‹ĹĄ prĂ„â€šĂ‹â€ˇvnĂ„â€šĂ‚Â­ asistent.",
     `Typ dokumentu: ${profile.label}.`,
     profile.system,
     PDF_RELEVANCE_RULES,
     PDF_IDENTITY_SPLIT_RULES,
-    "VytvoÄąâ„˘ formÄ‚Ë‡lnÄ‚Â­ Ä‚ĹźÄąâ„˘ednÄ‚Â­ listinu v Ă„Ĺ¤eÄąË‡tinĂ„â€ş odpovÄ‚Â­dajÄ‚Â­cÄ‚Â­ typu dokumentu.",
-    "PouÄąÄľij Ä‚Ĺźdaje o odesÄ‚Â­lateli z pÄąâ„˘iloÄąÄľenÄ‚Â©ho PDF, pokud jsou Ă„Ĺ¤itelnÄ‚Â©.",
-    `PÄąâ„˘Ä‚Â­jemce: ${recipient.nazev}, adresa nebo mĂ„â€şsto: ${recipient.adresa || recipient.mesto}, datovÄ‚Ë‡ schrÄ‚Ë‡nka: ${recipient.ds}.`,
-    "NevymÄ‚ËťÄąË‡lej skutkovÄ‚Ë‡ tvrzenÄ‚Â­, data ani prÄ‚Ë‡vnÄ‚Â­ dÄąĹ»vody, kterÄ‚Â© nejsou v promptu, kontextu nebo PDF.",
-    "Pokud nĂ„â€şkterÄ‚Ëť Ä‚Ĺźdaj chybÄ‚Â­, napiÄąË‡ text neutrÄ‚Ë‡lnĂ„â€ş a bez doplÄąÂovÄ‚Ë‡nÄ‚Â­ smyÄąË‡lenÄ‚Ëťch detailÄąĹ».",
-    "TĂ„â€şlo listiny musÄ‚Â­ bÄ‚Ëťt vĂ„â€şcnÄ‚Â©, pÄąâ„˘ehlednÄ‚Â© a pÄąâ„˘izpÄąĹ»sobenÄ‚Â© konkrÄ‚Â©tnÄ‚Â­mu typu podÄ‚Ë‡nÄ‚Â­.",
-    "VraÄąÄ„ pouze validnÄ‚Â­ JSON bez markdownu.",
-    'PouÄąÄľij schÄ‚Â©ma: {"senderName":"","senderAddress":"","senderBirthDate":"","senderBirthNumber":"","senderIco":"","refData":"","title":"","body":""}'
+    "VytvoĂ„Ä…Ă˘â€žË formĂ„â€šĂ‹â€ˇlnĂ„â€šĂ‚Â­ Ă„â€šÄąĹşĂ„Ä…Ă˘â€žËednĂ„â€šĂ‚Â­ listinu v Ä‚â€žÄąÂ¤eĂ„Ä…Ă‹â€ˇtinÄ‚â€žĂ˘â‚¬Ĺź odpovĂ„â€šĂ‚Â­dajĂ„â€šĂ‚Â­cĂ„â€šĂ‚Â­ typu dokumentu.",
+    "PouĂ„Ä…Ă„Äľij Ă„â€šÄąĹşdaje o odesĂ„â€šĂ‚Â­lateli z pĂ„Ä…Ă˘â€žËiloĂ„Ä…Ă„ÄľenĂ„â€šĂ‚Â©ho PDF, pokud jsou Ä‚â€žÄąÂ¤itelnĂ„â€šĂ‚Â©.",
+    `PĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­jemce: ${recipient.nazev}, adresa nebo mÄ‚â€žĂ˘â‚¬Ĺźsto: ${recipient.adresa || recipient.mesto}, datovĂ„â€šĂ‹â€ˇ schrĂ„â€šĂ‹â€ˇnka: ${recipient.ds}.`,
+    "NevymĂ„â€šĂ‹ĹĄĂ„Ä…Ă‹â€ˇlej skutkovĂ„â€šĂ‹â€ˇ tvrzenĂ„â€šĂ‚Â­, data ani prĂ„â€šĂ‹â€ˇvnĂ„â€šĂ‚Â­ dĂ„Ä…ÄąÂ»vody, kterĂ„â€šĂ‚Â© nejsou v promptu, kontextu nebo PDF.",
+    "Pokud nÄ‚â€žĂ˘â‚¬ĹźkterĂ„â€šĂ‹ĹĄ Ă„â€šÄąĹşdaj chybĂ„â€šĂ‚Â­, napiĂ„Ä…Ă‹â€ˇ text neutrĂ„â€šĂ‹â€ˇlnÄ‚â€žĂ˘â‚¬Ĺź a bez doplĂ„Ä…Ă‚ÂovĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­ smyĂ„Ä…Ă‹â€ˇlenĂ„â€šĂ‹ĹĄch detailĂ„Ä…ÄąÂ».",
+    "TÄ‚â€žĂ˘â‚¬Ĺźlo listiny musĂ„â€šĂ‚Â­ bĂ„â€šĂ‹ĹĄt vÄ‚â€žĂ˘â‚¬ĹźcnĂ„â€šĂ‚Â©, pĂ„Ä…Ă˘â€žËehlednĂ„â€šĂ‚Â© a pĂ„Ä…Ă˘â€žËizpĂ„Ä…ÄąÂ»sobenĂ„â€šĂ‚Â© konkrĂ„â€šĂ‚Â©tnĂ„â€šĂ‚Â­mu typu podĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­.",
+    "VraĂ„Ä…Ă„â€ž pouze validnĂ„â€šĂ‚Â­ JSON bez markdownu.",
+    'PouĂ„Ä…Ă„Äľij schĂ„â€šĂ‚Â©ma: {"senderName":"","senderAddress":"","senderBirthDate":"","senderBirthNumber":"","senderIco":"","refData":"","title":"","body":""}'
   ].join(" ");
 
   const userQuery = [
-    `Ä‚ĹˇĂ„Ĺ¤el listiny: ${prompt}`,
-    `RozpoznanÄ‚Ëť typ listiny: ${profile.label}`,
-    `DoplÄąÂujÄ‚Â­cÄ‚Â­ pokyn pro tento typ: ${profile.user}`,
-    `DoplÄąÂujÄ‚Â­cÄ‚Â­ kontext: ${aiContext || "Bez dalÄąË‡Ä‚Â­ho kontextu."}`,
-    "TÄ‚Ĺ‚n: formÄ‚Ë‡lnÄ‚Â­, vĂ„â€şcnÄ‚Ëť, Ä‚ĹźÄąâ„˘ednÄ‚Â­.",
-    "NÄ‚Ë‡zev listiny dej VELKÄ‚ĹĄMI PÄ‚Ĺ¤SMENY.",
-    "Pokud jde o procesnÄ‚Â­ podÄ‚Ë‡nÄ‚Â­, zakonĂ„Ĺ¤i text jasnÄ‚Ëťm nÄ‚Ë‡vrhem nebo petitem odpovÄ‚Â­dajÄ‚Â­cÄ‚Â­m danÄ‚Â©mu typu listiny."
+    `Ă„â€šÄąË‡Ä‚â€žÄąÂ¤el listiny: ${prompt}`,
+    `RozpoznanĂ„â€šĂ‹ĹĄ typ listiny: ${profile.label}`,
+    `DoplĂ„Ä…Ă‚ÂujĂ„â€šĂ‚Â­cĂ„â€šĂ‚Â­ pokyn pro tento typ: ${profile.user}`,
+    `DoplĂ„Ä…Ă‚ÂujĂ„â€šĂ‚Â­cĂ„â€šĂ‚Â­ kontext: ${aiContext || "Bez dalĂ„Ä…Ă‹â€ˇĂ„â€šĂ‚Â­ho kontextu."}`,
+    "TĂ„â€šÄąâ€šn: formĂ„â€šĂ‹â€ˇlnĂ„â€šĂ‚Â­, vÄ‚â€žĂ˘â‚¬ĹźcnĂ„â€šĂ‹ĹĄ, Ă„â€šÄąĹşĂ„Ä…Ă˘â€žËednĂ„â€šĂ‚Â­.",
+    "NĂ„â€šĂ‹â€ˇzev listiny dej VELKĂ„â€šÄąÄ„MI PĂ„â€šÄąÂ¤SMENY.",
+    "Pokud jde o procesnĂ„â€šĂ‚Â­ podĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­, zakonÄ‚â€žÄąÂ¤i text jasnĂ„â€šĂ‹ĹĄm nĂ„â€šĂ‹â€ˇvrhem nebo petitem odpovĂ„â€šĂ‚Â­dajĂ„â€šĂ‚Â­cĂ„â€šĂ‚Â­m danĂ„â€šĂ‚Â©mu typu listiny."
   ].join("\n");
 
   const parts = [{ text: userQuery }];
@@ -574,15 +637,15 @@ async function extractDebtAmountFromPdf(pdfBase64) {
     systemInstruction: {
       parts: [{
         text: [
-          "Jsi pÄąâ„˘esnÄ‚Ëť extraktor Ä‚ĹźdajÄąĹ» z prÄ‚Ë‡vnÄ‚Â­ch dokumentÄąĹ».",
+          "Jsi pĂ„Ä…Ă˘â€žËesnĂ„â€šĂ‹ĹĄ extraktor Ă„â€šÄąĹşdajĂ„Ä…ÄąÂ» z prĂ„â€šĂ‹â€ˇvnĂ„â€šĂ‚Â­ch dokumentĂ„Ä…ÄąÂ».",
           PDF_RELEVANCE_RULES,
-          "Najdi v PDF dluÄąÄľnou Ă„Ĺ¤Ä‚Ë‡stku nebo vymÄ‚Ë‡hanou Ă„Ĺ¤Ä‚Ë‡stku.",
-          "VraÄąÄ„ pouze validnÄ‚Â­ JSON bez markdownu.",
-          'PouÄąÄľij schÄ‚Â©ma: {"debtAmount":""}'
+          "Najdi v PDF dluĂ„Ä…Ă„Äľnou Ä‚â€žÄąÂ¤Ă„â€šĂ‹â€ˇstku nebo vymĂ„â€šĂ‹â€ˇhanou Ä‚â€žÄąÂ¤Ă„â€šĂ‹â€ˇstku.",
+          "VraĂ„Ä…Ă„â€ž pouze validnĂ„â€šĂ‚Â­ JSON bez markdownu.",
+          'PouĂ„Ä…Ă„Äľij schĂ„â€šĂ‚Â©ma: {"debtAmount":""}'
         ].join(" ")
       }]
     },
-    contents: [{ parts: [{ text: "Vyhledej v PDF dluÄąÄľnou Ă„Ĺ¤Ä‚Ë‡stku. VraÄąÄ„ ji jako Ă„Ĺ¤Ä‚Â­slo bez mĂ„â€şny, ideÄ‚Ë‡lnĂ„â€ş ve formÄ‚Ë‡tu 12500.50. Pokud ji nenajdeÄąË‡, vraÄąÄ„ prÄ‚Ë‡zdnÄ‚Ëť Äąâ„˘etĂ„â€şzec." }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
+    contents: [{ parts: [{ text: "Vyhledej v PDF dluĂ„Ä…Ă„Äľnou Ä‚â€žÄąÂ¤Ă„â€šĂ‹â€ˇstku. VraĂ„Ä…Ă„â€ž ji jako Ä‚â€žÄąÂ¤Ă„â€šĂ‚Â­slo bez mÄ‚â€žĂ˘â‚¬Ĺźny, ideĂ„â€šĂ‹â€ˇlnÄ‚â€žĂ˘â‚¬Ĺź ve formĂ„â€šĂ‹â€ˇtu 12500.50. Pokud ji nenajdeĂ„Ä…Ă‹â€ˇ, vraĂ„Ä…Ă„â€ž prĂ„â€šĂ‹â€ˇzdnĂ„â€šĂ‹ĹĄ Ă„Ä…Ă˘â€žËetÄ‚â€žĂ˘â‚¬Ĺźzec." }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
     generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
   });
   return normalizeText(parsed.debtAmount);
@@ -593,16 +656,16 @@ async function extractStopExecutionFromPdf(pdfBase64) {
     systemInstruction: {
       parts: [{
         text: [
-          "Jsi extraktor Ä‚ĹźdajÄąĹ» z exekuĂ„Ĺ¤nÄ‚Â­ch dokumentÄąĹ».",
+          "Jsi extraktor Ă„â€šÄąĹşdajĂ„Ä…ÄąÂ» z exekuÄ‚â€žÄąÂ¤nĂ„â€šĂ‚Â­ch dokumentĂ„Ä…ÄąÂ».",
           PDF_RELEVANCE_RULES,
-          "Najdi klÄ‚Â­Ă„Ĺ¤ovÄ‚Â© Ä‚Ĺźdaje pro nÄ‚Ë‡vrh na zastavenÄ‚Â­ exekuce.",
-          "VraÄąÄ„ pouze validnÄ‚Â­ JSON bez markdownu.",
-          "PouÄąÄľij schÄ‚Â©ma:",
+          "Najdi klĂ„â€šĂ‚Â­Ä‚â€žÄąÂ¤ovĂ„â€šĂ‚Â© Ă„â€šÄąĹşdaje pro nĂ„â€šĂ‹â€ˇvrh na zastavenĂ„â€šĂ‚Â­ exekuce.",
+          "VraĂ„Ä…Ă„â€ž pouze validnĂ„â€šĂ‚Â­ JSON bez markdownu.",
+          "PouĂ„Ä…Ă„Äľij schĂ„â€šĂ‚Â©ma:",
           '{"exekutor":"","exekutorskyUrad":"","adresaUradu":"","spisovaZnacka":"","opravneny":"","povinny":"","exekucniTitul":"","datumVyzvy":""}'
         ].join(" ")
       }]
     },
-    contents: [{ parts: [{ text: "VytĂ„â€şÄąÄľ uvedenÄ‚Â© Ä‚Ĺźdaje z PDF. Pokud Ä‚Ĺźdaj nenajdeÄąË‡, vraÄąÄ„ prÄ‚Ë‡zdnÄ‚Ëť Äąâ„˘etĂ„â€şzec." }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
+    contents: [{ parts: [{ text: "VytÄ‚â€žĂ˘â‚¬ĹźĂ„Ä…Ă„Äľ uvedenĂ„â€šĂ‚Â© Ă„â€šÄąĹşdaje z PDF. Pokud Ă„â€šÄąĹşdaj nenajdeĂ„Ä…Ă‹â€ˇ, vraĂ„Ä…Ă„â€ž prĂ„â€šĂ‹â€ˇzdnĂ„â€šĂ‹ĹĄ Ă„Ä…Ă˘â€žËetÄ‚â€žĂ˘â‚¬Ĺźzec." }, { inlineData: { mimeType: "application/pdf", data: pdfBase64 } }] }],
     generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
   });
 }
@@ -624,9 +687,9 @@ app.get("/api/contacts", (req, res) => {
 
 app.post("/api/import-json", upload.single("jsonDb"), (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "ChybÄ‚Â­ JSON soubor." });
+    if (!req.file) return res.status(400).json({ ok: false, error: "ChybĂ„â€šĂ‚Â­ JSON soubor." });
     if (!["application/json", "text/plain", ""].includes(req.file.mimetype)) {
-      return res.status(400).json({ ok: false, error: "Soubor musÄ‚Â­ bÄ‚Ëťt JSON." });
+      return res.status(400).json({ ok: false, error: "Soubor musĂ„â€šĂ‚Â­ bĂ„â€šĂ‹ĹĄt JSON." });
     }
     const parsed = JSON.parse(req.file.buffer.toString("utf-8"));
     const imported = normalizeContactsFromJson(parsed);
@@ -641,21 +704,21 @@ app.post("/api/import-json", upload.single("jsonDb"), (req, res) => {
 
 app.post("/api/extract-debt", upload.single("pdf"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "ChybÄ‚Â­ PDF soubor." });
+    if (!req.file) return res.status(400).json({ ok: false, error: "ChybĂ„â€šĂ‚Â­ PDF soubor." });
     const debtAmount = await extractDebtAmountFromPdf(req.file.buffer.toString("base64"));
     res.json({ ok: true, debtAmount });
   } catch (error) {
-    res.status(500).json({ ok: false, error: error.message || "NepodaÄąâ„˘ilo se naĂ„Ĺ¤Ä‚Â­st dluÄąÄľnou Ă„Ĺ¤Ä‚Ë‡stku z PDF." });
+    res.status(500).json({ ok: false, error: error.message || "NepodaĂ„Ä…Ă˘â€žËilo se naÄ‚â€žÄąÂ¤Ă„â€šĂ‚Â­st dluĂ„Ä…Ă„Äľnou Ä‚â€žÄąÂ¤Ă„â€šĂ‹â€ˇstku z PDF." });
   }
 });
 
 app.post("/api/extract-stop-execution", upload.single("pdf"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ ok: false, error: "ChybÄ‚Â­ PDF soubor." });
+    if (!req.file) return res.status(400).json({ ok: false, error: "ChybĂ„â€šĂ‚Â­ PDF soubor." });
     const data = await extractStopExecutionFromPdf(req.file.buffer.toString("base64"));
     res.json({ ok: true, data });
   } catch (error) {
-    res.status(500).json({ ok: false, error: error.message || "Extrakce Ä‚ĹźdajÄąĹ» z PDF selhala." });
+    res.status(500).json({ ok: false, error: error.message || "Extrakce Ă„â€šÄąĹşdajĂ„Ä…ÄąÂ» z PDF selhala." });
   }
 });
 
@@ -666,11 +729,11 @@ app.post("/api/generate", upload.single("pdf"), async (req, res) => {
     const recipientRaw = req.body.recipient;
 
     if (!prompt || prompt.length < 3) {
-      return res.status(400).json({ ok: false, error: "Prompt je pÄąâ„˘Ä‚Â­liÄąË‡ krÄ‚Ë‡tkÄ‚Ëť." });
+      return res.status(400).json({ ok: false, error: "Prompt je pĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­liĂ„Ä…Ă‹â€ˇ krĂ„â€šĂ‹â€ˇtkĂ„â€šĂ‹ĹĄ." });
     }
 
     let recipient = {
-      nazev: "PÄąâ„˘Ä‚Â­jemce neuveden",
+      nazev: "PĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­jemce neuveden",
       adresa: "",
       mesto: "",
       ds: ""
@@ -680,13 +743,13 @@ app.post("/api/generate", upload.single("pdf"), async (req, res) => {
       try {
         const parsedRecipient = JSON.parse(recipientRaw);
         recipient = {
-          nazev: parsedRecipient?.nazev || "PÄąâ„˘Ä‚Â­jemce neuveden",
+          nazev: parsedRecipient?.nazev || "PĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­jemce neuveden",
           adresa: parsedRecipient?.adresa || "",
           mesto: parsedRecipient?.mesto || "",
           ds: parsedRecipient?.ds || ""
         };
       } catch {
-        return res.status(400).json({ ok: false, error: "PÄąâ„˘Ä‚Â­jemce nenÄ‚Â­ validnÄ‚Â­ JSON." });
+        return res.status(400).json({ ok: false, error: "PĂ„Ä…Ă˘â€žËĂ„â€šĂ‚Â­jemce nenĂ„â€šĂ‚Â­ validnĂ„â€šĂ‚Â­ JSON." });
       }
     }
 
@@ -701,7 +764,7 @@ app.post("/api/generate", upload.single("pdf"), async (req, res) => {
   } catch (error) {
     res.status(500).json({
       ok: false,
-      error: error.message || "GenerovÄ‚Ë‡nÄ‚Â­ selhalo."
+      error: error.message || "GenerovĂ„â€šĂ‹â€ˇnĂ„â€šĂ‚Â­ selhalo."
     });
   }
 });
@@ -818,9 +881,10 @@ app.post("/api/export-docx", async (req, res) => {
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
+    const filename = buildDocxFilenameFromTitle(title);
     res.setHeader(
       "Content-Disposition",
-      'attachment; filename=\"listina.docx\"'
+      `attachment; filename="${filename}"`
     );
 
     res.send(buffer);
@@ -835,6 +899,9 @@ app.post("/api/export-docx", async (req, res) => {
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
 loadContactsFromFiles();
-app.listen(PORT, () => console.log(`Server bĂ„â€şÄąÄľÄ‚Â­ na http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Server bÄ‚â€žĂ˘â‚¬ĹźĂ„Ä…Ă„ÄľĂ„â€šĂ‚Â­ na http://localhost:${PORT}`));
 
 // debt_statement profile already injected in previous step
+
+
+
